@@ -51,7 +51,7 @@ pub enum CleanupKind {
     Command(&'static [CommandSpec]),
     /// Move `%TEMP%` entries older than [`TEMP_MIN_AGE`] to the Recycle Bin.
     TempFiles,
-    /// Fixed PowerShell script: the ONLY permanent deletion DiskWhy performs.
+    /// Fixed PowerShell script: permanently empties the Recycle Bin (the only action that destroys user files).
     EmptyRecycleBin,
     /// Open a built-in Windows tool (an id from [`SYSTEM_TOOLS`]).
     OpenTool(&'static str),
@@ -139,7 +139,7 @@ pub const CLEANUP_ACTIONS: &[CleanupSpec] = &[
     CleanupSpec {
         id: "empty-recycle-bin",
         title: "ล้างถังขยะ (Recycle Bin)",
-        description: "รัน `Clear-RecycleBin -Force` — เป็นการลบถาวรอย่างเดียวที่ DiskWhy ทำ: ไฟล์ทั้งหมดในถังขยะของทุกไดรฟ์จะกู้คืนไม่ได้อีก",
+        description: "รัน `Clear-RecycleBin -Force` — ลบถาวร: ไฟล์ทั้งหมดในถังขยะของทุกไดรฟ์จะกู้คืนไม่ได้อีก",
         kind: CleanupKind::EmptyRecycleBin,
         destructive: true,
         permanent: true,

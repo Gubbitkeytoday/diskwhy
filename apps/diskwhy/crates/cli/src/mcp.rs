@@ -185,7 +185,7 @@ impl DiskWhyServer {
     }
 
     #[tool(
-        description = "Run ONE whitelisted cleanup action (fixed commands, no shell strings). Confirm with the user first. Actions: npm-cache (npm cache clean --force), pnpm-store (pnpm store prune), yarn-cache (yarn cache clean), pip-cache (python -m pip cache purge), nuget-cache (dotnet nuget locals all --clear), wsl-shutdown (wsl --shutdown; frees nothing itself, needed before compacting a .vhdx and stops running WSL/Docker), temp-files (move %TEMP% entries older than 24 h to the Recycle Bin, skipping in-use files), empty-recycle-bin (PowerShell Clear-RecycleBin -Force: the ONLY permanent deletion, all drives, cannot be undone - ask for a separate explicit confirmation), open-storage-sense / open-disk-cleanup / open-apps-features / open-recycle-bin (open the Windows tool for the user). Reports measured free space before/after on the system drive; a tool that is not installed returns a friendly not-installed result. Long commands: if the answer says status \"running\", call run_cleanup again with the same action to collect the result.",
+        description = "Run ONE whitelisted cleanup action (fixed commands, no shell strings). Confirm with the user first. Actions (cache cleanups delete re-downloadable caches permanently): npm-cache (npm cache clean --force), pnpm-store (pnpm store prune), yarn-cache (yarn cache clean), pip-cache (python -m pip cache purge), nuget-cache (dotnet nuget locals all --clear), wsl-shutdown (wsl --shutdown; frees nothing itself, needed before compacting a .vhdx and stops running WSL/Docker), temp-files (move %TEMP% entries older than 24 h to the Recycle Bin, skipping in-use files), empty-recycle-bin (PowerShell Clear-RecycleBin -Force: permanently deletes everything in the Recycle Bin on all drives, cannot be undone - ask for a separate explicit confirmation), open-storage-sense / open-disk-cleanup / open-apps-features / open-recycle-bin (open the Windows tool for the user). Reports measured free space before/after on the system drive; a tool that is not installed returns a friendly not-installed result. Long commands: if the answer says status \"running\", call run_cleanup again with the same action to collect the result.",
         annotations(title = "Run a whitelisted cleanup", read_only_hint = false, destructive_hint = true, idempotent_hint = false, open_world_hint = false)
     )]
     async fn run_cleanup(&self, Parameters(args): Parameters<CleanupArgs>) -> CallToolResult {
@@ -279,7 +279,7 @@ mod tests {
         let rec = by("move_to_recycle_bin").description.clone().unwrap().to_lowercase();
         assert!(rec.contains("recycle bin") && rec.contains("explicit yes") && rec.contains("recoverable"));
         let cl = by("run_cleanup").description.clone().unwrap();
-        assert!(cl.contains("permanent") && cl.contains("ONLY permanent deletion"));
+        assert!(cl.contains("permanently deletes everything in the Recycle Bin") && cl.contains("re-downloadable caches permanently"));
     }
 
     #[test]

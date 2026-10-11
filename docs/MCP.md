@@ -68,7 +68,7 @@ claude mcp add --scope user diskwhy -- "<install dir>\binaries\diskwhy-cli.exe" 
 | `find_unused` | อ่านอย่างเดียว | `path` | สี่กลุ่มที่ตรวจพบ: ไฟล์ใหญ่ (≥ 100 MB) ที่ไม่ได้แตะเกิน 1 ปี, โปรเจกต์ที่ source ไม่เปลี่ยนเกิน 90 วันพร้อมโฟลเดอร์ที่สร้างใหม่ได้, ตัวติดตั้งหรือไฟล์บีบอัดเก่า (≥ 10 MB) ใน Downloads ที่เกิน 30 วัน, ข้อมูล AppData ของโปรแกรมที่ไม่พบในรายการที่ติดตั้ง |
 | `browse` | อ่านอย่างเดียว | `path` | รายการลูกของโฟลเดอร์นั้นในผลสแกน: ชื่อ, ขนาด, จำนวนไฟล์, วันที่แก้ไขล่าสุด |
 | `largest_files` | อ่านอย่างเดียว | `path`, `limit` (ไม่บังคับ) | ไฟล์ใหญ่สุดเรียงตามขนาด: path, ชื่อ, ขนาด, หมวด, วันที่แก้ไขล่าสุด |
-| `move_to_recycle_bin` | **ทำลาย (destructive)** | `path` | ย้ายไฟล์หรือโฟลเดอร์ไป Recycle Bin (กู้คืนได้) คืนค่าพื้นที่ที่ปลดปล่อย (ไบต์) ตำแหน่งระบบถูกปฏิเสธ |
+| `move_to_recycle_bin` | **ทำลาย (destructive)** | `paths` (1–50 รายการ), `reason` (ไม่บังคับ) | ย้ายไฟล์หรือโฟลเดอร์ไป Recycle Bin (กู้คืนได้) คืนค่าพื้นที่ที่ปลดปล่อย (ไบต์) ตำแหน่งระบบถูกปฏิเสธ |
 | `run_cleanup` | **ทำลาย (destructive)** | `action` (ต้องอยู่ในรายการด้านล่าง) | ผลของ action ที่สั่ง (ดูตารางถัดไป) |
 | `admin_commands` | อ่านอย่างเดียว | ไม่มี | ข้อความคำสั่งที่ต้องใช้สิทธิ์ผู้ดูแลระบบ เช่น `DISM /Online /Cleanup-Image /StartComponentCleanup`, `powercfg /h off`, `Optimize-VHD` ให้คุณรันเอง DiskWhy ไม่รันให้ |
 
@@ -80,14 +80,14 @@ claude mcp add --scope user diskwhy -- "<install dir>\binaries\diskwhy-cli.exe" 
 
 | action | ทำอะไร | ผลต่อไฟล์ |
 |---|---|---|
-| `npm-cache` | ล้างแคชของ npm | ย้ายไป Recycle Bin (กู้คืนได้) |
-| `pnpm-store` | ล้างแคช pnpm store | ย้ายไป Recycle Bin (กู้คืนได้) |
-| `yarn-cache` | ล้างแคชของ Yarn | ย้ายไป Recycle Bin (กู้คืนได้) |
-| `pip-cache` | ล้างแคชของ pip | ย้ายไป Recycle Bin (กู้คืนได้) |
-| `nuget-cache` | ล้างแคชของ NuGet | ย้ายไป Recycle Bin (กู้คืนได้) |
+| `npm-cache` | ล้างแคชของ npm | รัน `npm cache clean --force` — **ลบแคชถาวร** แต่เครื่องมือจะดาวน์โหลดกลับมาเองเมื่อต้องใช้ |
+| `pnpm-store` | ล้างแคช pnpm store | รัน `pnpm store prune` — **ลบแคชถาวร** แต่เครื่องมือจะดาวน์โหลดกลับมาเองเมื่อต้องใช้ |
+| `yarn-cache` | ล้างแคชของ Yarn | รัน `yarn cache clean` — **ลบแคชถาวร** แต่เครื่องมือจะดาวน์โหลดกลับมาเองเมื่อต้องใช้ |
+| `pip-cache` | ล้างแคชของ pip | รัน `python -m pip cache purge` — **ลบแคชถาวร** แต่เครื่องมือจะดาวน์โหลดกลับมาเองเมื่อต้องใช้ |
+| `nuget-cache` | ล้างแคชของ NuGet | รัน `dotnet nuget locals all --clear` — **ลบแคชถาวร** แต่เครื่องมือจะดาวน์โหลดกลับมาเองเมื่อต้องใช้ |
 | `temp-files` | ล้างไฟล์ชั่วคราว | ย้ายไป Recycle Bin (กู้คืนได้) |
 | `wsl-shutdown` | หยุด WSL ทั้งหมด (`wsl --shutdown`) เพื่อให้ไฟล์ดิสก์เสมือนพร้อมย่อขนาด | ไม่ลบไฟล์ |
-| `empty-recycle-bin` | ล้างถังขยะ | **ลบถาวร** เป็นการลบถาวรเพียงอย่างเดียวของ DiskWhy |
+| `empty-recycle-bin` | ล้างถังขยะ | **ลบถาวร** — ไฟล์ทุกไฟล์ในถังขยะจะกู้คืนไม่ได้ |
 | `open-storage-sense` | เปิด Settings › Storage Sense | ไม่แตะไฟล์ |
 | `open-disk-cleanup` | เปิด Disk Cleanup | ไม่แตะไฟล์ |
 | `open-apps-features` | เปิด Settings › Apps & features | ไม่แตะไฟล์ |
@@ -114,7 +114,7 @@ Prompts ถือว่าพาธและชื่อไฟล์ที่ไ
 
 - **อ่านอย่างเดียวเป็นค่าเริ่มต้น** เครื่องมือที่อ่านอย่างเดียวไม่เปลี่ยนแปลงไฟล์ของผู้ใช้
 - **เครื่องมือที่ทำลาย** (`move_to_recycle_bin`, `run_cleanup`) ทำเครื่องหมาย destructive ทำให้ Claude ต้องถามคุณก่อนรัน
-- **การลบปกติคือการย้ายไป Recycle Bin** (กู้คืนได้) ทางเดียวที่ลบถาวรคือ `run_cleanup` action `empty-recycle-bin`
+- **การลบปกติคือการย้ายไป Recycle Bin** (กู้คืนได้) ส่วน `run_cleanup` ที่ลบถาวรคือ `empty-recycle-bin` และคำสั่งล้างแคชของเครื่องมือนักพัฒนา (npm/pnpm/yarn/pip/NuGet) ซึ่งเป็นข้อมูลที่ดาวน์โหลดใหม่ได้ — ทุกตัวทำเครื่องหมาย destructive ให้ Claude ถามก่อน
 - **ตำแหน่งที่ถูกปฏิเสธ** (ตรวจในคอร์ ทั้งแอป CLI และ MCP ใช้ร่วมกัน):
   - ราก drive (เช่น `C:\`, `D:\`)
   - `C:\Windows`, `C:\Program Files`, `C:\Program Files (x86)`, `C:\ProgramData\Microsoft`
