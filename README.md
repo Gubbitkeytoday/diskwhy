@@ -117,3 +117,19 @@ cd apps/diskwhy && DISKWHY_BENCH='C:\' cargo test --release bench_real -- --igno
 เทสต์ MCP เป็น integration test ที่เปิดตัว `diskwhy-cli` เป็นโปรเซสลูก แล้วคุยกับมันผ่าน stdio ไม่เรียก Claude และไม่ต้องใช้บัญชีใด ๆ
 
 ดูรายละเอียดสำหรับทีมที่ [docs/HANDOFF.md](docs/HANDOFF.md) และรายละเอียด MCP ที่ [docs/MCP.md](docs/MCP.md)
+
+## ปล่อยเวอร์ชันใหม่ + อัปเดตอัตโนมัติ
+
+ทุกเครื่องที่ติดตั้ง DiskWhy จะเช็กเวอร์ชันใหม่จาก GitHub Releases ตอนเปิดแอป แล้วถามผู้ใช้ว่าจะอัปเดตไหม
+(ไฟล์อัปเดตถูกเซ็นด้วยกุญแจของโปรเจกต์ แอปจะไม่ติดตั้งไฟล์ที่ลายเซ็นไม่ตรง)
+
+1. แก้โค้ด แล้วเพิ่มเลขเวอร์ชันใน `apps/diskwhy/src-tauri/tauri.conf.json` (และ `apps/diskwhy/package.json`) เช่น `0.2.0` → `0.3.0`
+2. commit แล้ว push tag ที่ตรงกับเวอร์ชัน:
+   ```bash
+   git tag v0.3.0 && git push origin main --tags
+   ```
+3. GitHub Actions (`.github/workflows/release.yml`) จะรันเทสต์ → build → เซ็น → สร้าง Release พร้อม `latest.json`
+4. ผู้ใช้เปิดแอปครั้งถัดไปจะเห็นหน้าต่าง "มี DiskWhy เวอร์ชันใหม่" → กดอัปเดต → แอปติดตั้งและเปิดใหม่เอง
+
+กุญแจเซ็นอัปเดตอยู่ที่ `%USERPROFILE%\.tauri\diskwhy-updater.key` (+ `.password`) และใน GitHub Secrets
+`TAURI_SIGNING_PRIVATE_KEY` / `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` — **สำรองไว้ที่ปลอดภัย** ถ้ากุญแจหาย เครื่องที่ติดตั้งแล้วจะรับอัปเดตไม่ได้อีก

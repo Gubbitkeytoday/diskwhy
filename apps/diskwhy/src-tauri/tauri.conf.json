@@ -48,6 +48,18 @@
     },
     "resources": {
       "binaries/diskwhy-cli.exe": "binaries/diskwhy-cli.exe"
+    },
+    "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDUzRUFERDEzMzQ3N0FGQjIKUldTeXIzYzBFOTNxVTQyVCtvNmpBM2pCdWYwU0JYQ2FRRk5VeCtMYldaNEVOL1k2OFdNUjd6SkEK",
+      "endpoints": [
+        "https://github.com/Gubbitkeytoday/diskwhy/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
     }
   }
 }

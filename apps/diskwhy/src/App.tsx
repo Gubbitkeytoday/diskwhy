@@ -2,6 +2,7 @@ import { Button, Sheet, SheetBody, SheetContent, SheetDescription, SheetHeader, 
 import { MoonIcon, PlugIcon, ScanSearchIcon, SunIcon } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { McpPanel } from "./components/mcp-panel";
+import { UpdateNotice } from "./components/update-notice";
 import { ResultsScreen } from "./components/results";
 import { HomeScreen, NotInAppScreen, ScanningScreen, StartupErrorScreen } from "./components/screens";
 import { type Backend, getBackend } from "./lib/backend";
@@ -99,6 +100,7 @@ export function App() {
           {resolvedTheme === "dark" ? <SunIcon /> : <MoonIcon />}
         </Button>
       </header>
+      <UpdateNotice />
       <main className="flex flex-1">
         {startupError === NOT_IN_APP ? (
           <NotInAppScreen />
