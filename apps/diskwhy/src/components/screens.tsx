@@ -1,5 +1,6 @@
 import { Badge, Button, Card, CardContent, cn, Kbd, Skeleton } from "@nova/ui";
-import { FolderSearchIcon, HardDriveIcon, ScanSearchIcon, SquareIcon, UsbIcon } from "lucide-react";
+import { FolderSearchIcon, HardDriveIcon, RotateCwIcon, ScanSearchIcon, SquareIcon, UsbIcon } from "lucide-react";
+import type { ReactNode } from "react";
 import { formatBytes, formatDuration, formatNumber, percent } from "../lib/format";
 import type { DriveInfo, ProgressEvent } from "../lib/types";
 
@@ -18,13 +19,11 @@ export function HomeScreen({
   loading,
   onScan,
   onPick,
-  demo,
 }: {
   drives: DriveInfo[];
   loading: boolean;
   onScan: (path: string) => void;
   onPick: () => void;
-  demo: boolean;
 }) {
   return (
     <div className="mx-auto grid w-full max-w-4xl gap-8 px-6 py-10">
@@ -36,11 +35,6 @@ export function HomeScreen({
         <p className="mx-auto mt-2 max-w-lg text-muted-foreground">
           เลือกไดรฟ์ที่ต้องการตรวจ แล้ว DiskWhy จะบอกว่าอะไรกินพื้นที่ อะไรลบได้อย่างปลอดภัย และควรจัดการอย่างไร
         </p>
-        {demo && (
-          <Badge variant="warning" className="mt-3">
-            โหมดสาธิต — ข้อมูลจำลอง (เปิดเป็นแอปเดสก์ท็อปเพื่อสแกนเครื่องจริง)
-          </Badge>
-        )}
       </div>
 
       <section aria-label="ไดรฟ์ในเครื่อง" className="grid gap-3 sm:grid-cols-2">
@@ -93,7 +87,7 @@ export function HomeScreen({
           <FolderSearchIcon /> เลือกโฟลเดอร์เอง…
         </Button>
         <p className="text-xs text-muted-foreground">
-          แอปอ่านข้อมูลอย่างเดียว ไม่ส่งข้อมูลออกนอกเครื่อง และลบไฟล์ได้เฉพาะเมื่อคุณยืนยัน (ย้ายไปถังขยะ กู้คืนได้)
+          แอปอ่านข้อมูลอย่างเดียว ไม่ส่งข้อมูลออกนอกเครื่อง เว้นแต่คุณกดใช้ผู้ช่วย AI และลบไฟล์ได้เฉพาะเมื่อคุณยืนยัน (ย้ายไปถังขยะ กู้คืนได้)
         </p>
       </div>
     </div>
@@ -146,5 +140,54 @@ export function ScanningScreen({ path, progress, onCancel }: { path: string; pro
         </Button>
       </div>
     </div>
+  );
+}
+
+/** Centered card shown instead of the app when the UI cannot start. */
+function StartupCard({ title, children, action }: { title: string; children: ReactNode; action?: ReactNode }) {
+  return (
+    <div className="mx-auto grid w-full max-w-xl place-items-center px-6 py-16">
+      <Card className="w-full gap-6 px-8 py-10 text-center">
+        <div className="mx-auto grid size-14 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-lg">
+          <ScanSearchIcon className="size-7" aria-hidden />
+        </div>
+        <div className="grid gap-3">
+          <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+          {children}
+        </div>
+        {action}
+      </Card>
+    </div>
+  );
+}
+
+/** Shown when the page is opened outside the desktop app. DiskWhy never falls back to sample data. */
+export function NotInAppScreen() {
+  return (
+    <StartupCard title="เปิดใน DiskWhy เพื่อสแกนเครื่องจริง">
+      <p className="text-muted-foreground">
+        DiskWhy อ่านข้อมูลจากคอมพิวเตอร์เครื่องนี้โดยตรง จึงทำงานได้เฉพาะในแอปเดสก์ท็อป หน้านี้จะไม่แสดงข้อมูลตัวอย่างใด ๆ
+      </p>
+      <p className="text-sm text-muted-foreground">
+        ติดตั้งด้วยไฟล์ <code className="font-mono text-foreground">DiskWhy_0.1.0_x64-setup.exe</code> แล้วเปิดแอป DiskWhy
+      </p>
+    </StartupCard>
+  );
+}
+
+/** Shown when the desktop app failed to start (for example, the backend could not list drives). */
+export function StartupErrorScreen({ message }: { message: string }) {
+  return (
+    <StartupCard
+      title="เริ่มต้นแอปไม่สำเร็จ"
+      action={
+        <Button className="mx-auto" onClick={() => window.location.reload()}>
+          <RotateCwIcon /> ลองอีกครั้ง
+        </Button>
+      }
+    >
+      <p className="text-muted-foreground">DiskWhy ยังอ่านข้อมูลจากเครื่องนี้ไม่ได้ ลองเปิดแอปใหม่อีกครั้ง</p>
+      <p className="break-words rounded-md bg-muted px-3 py-2 text-left font-mono text-xs text-muted-foreground">{message}</p>
+    </StartupCard>
   );
 }

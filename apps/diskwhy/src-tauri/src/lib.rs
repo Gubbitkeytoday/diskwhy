@@ -1,4 +1,6 @@
+mod ai;
 mod insights;
+mod installed;
 mod scan;
 
 use insights::{CategoryStat, ExtStat, Hog, NodeView, TopFile};
@@ -233,13 +235,41 @@ fn move_to_trash(path: String, dir_ids: Vec<u32>, file_name: Option<String>, sta
     if is_protected(&target) {
         return Err("ตำแหน่งนี้เป็นไฟล์/โฟลเดอร์ของระบบ — แอปไม่อนุญาตให้ลบเพื่อความปลอดภัย".into());
     }
-    trash::delete(&target).map_err(|e| format!("ย้ายไปถังขยะไม่สำเร็จ: {e}"))?;
     let mut guard = state.result.lock().map_err(|e| e.to_string())?;
+    // The index path must still point at exactly this file/folder; indices shift after earlier removals,
+    // and a stale index must never update (or count) the wrong node.
+    if let Some(r) = guard.as_ref()
+        && !tree_path_matches(&r.root_path, &r.root, &dir_ids, file_name.as_deref(), &path)
+    {
+        return Err("ผลสแกนเปลี่ยนไปแล้ว (มีการลบรายการอื่นก่อนหน้า) — กรุณาเปิดตำแหน่งนี้ใหม่หรือสแกนอีกครั้ง".into());
+    }
+    trash::delete(&target).map_err(|e| format!("ย้ายไปถังขยะไม่สำเร็จ: {e}"))?;
     let freed = guard
         .as_mut()
         .and_then(|r| scan::remove_from_tree(&mut r.root, &dir_ids, file_name.as_deref()))
         .unwrap_or(0);
     Ok(freed)
+}
+
+/// Does `dir_ids` (+ optional file name) resolve to `target` in the scanned tree? Case-insensitive, separator-agnostic.
+fn tree_path_matches(root_path: &Path, root: &DirNode, dir_ids: &[u32], file_name: Option<&str>, target: &str) -> bool {
+    let norm = |s: &str| s.replace('/', "\\").trim_end_matches('\\').to_lowercase();
+    let mut built = norm(&root_path.to_string_lossy());
+    let mut node = root;
+    for &i in dir_ids {
+        let Some(child) = node.children.get(i as usize) else { return false };
+        built.push('\\');
+        built.push_str(&child.name.to_lowercase());
+        node = child;
+    }
+    if let Some(f) = file_name {
+        if !node.big_files.iter().any(|x| &*x.name == f) {
+            return false;
+        }
+        built.push('\\');
+        built.push_str(&f.to_lowercase());
+    }
+    built == norm(target)
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -248,7 +278,19 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .manage(AppState::default())
-        .invoke_handler(tauri::generate_handler![list_drives, start_scan, cancel_scan, get_report, get_node, move_to_trash])
+        .invoke_handler(tauri::generate_handler![
+            list_drives,
+            start_scan,
+            cancel_scan,
+            get_report,
+            get_node,
+            move_to_trash,
+            ai::ai_key_status,
+            ai::ai_set_key,
+            ai::ai_clear_key,
+            ai::ai_analyze,
+            ai::open_system_tool
+        ])
         .run(tauri::generate_context!())
         .expect("error while running DiskWhy");
 }
@@ -265,6 +307,22 @@ mod tests {
         for p in ["C:\\Users\\somchai\\Downloads\\setup.exe", "D:\\Videos\\old.mkv", "C:\\Users\\a\\code\\app\\node_modules"] {
             assert!(!is_protected(Path::new(p)), "{p} should be allowed");
         }
+    }
+
+    #[test]
+    fn trash_target_must_match_tree_node() {
+        use scan::FileEntry;
+        let leaf = DirNode { name: "node_modules".into(), ..Default::default() };
+        let app = DirNode { name: "app".into(), children: vec![leaf], ..Default::default() };
+        let mut root = DirNode { name: "C:\\".into(), children: vec![app], ..Default::default() };
+        root.children[0].big_files = vec![FileEntry { name: "setup.exe".into(), size: 5, modified: 0 }];
+        let rp = Path::new("C:\\Users\\a\\");
+        assert!(tree_path_matches(rp, &root, &[0, 0], None, "c:/users/A/app/node_modules/"));
+        assert!(tree_path_matches(rp, &root, &[0], Some("setup.exe"), "C:\\Users\\a\\app\\setup.exe"));
+        // Stale or wrong indices are rejected.
+        assert!(!tree_path_matches(rp, &root, &[0], None, "C:\\Users\\a\\app\\node_modules"));
+        assert!(!tree_path_matches(rp, &root, &[1], None, "C:\\Users\\a\\other"));
+        assert!(!tree_path_matches(rp, &root, &[0], Some("gone.exe"), "C:\\Users\\a\\app\\gone.exe"));
     }
 
     #[test]

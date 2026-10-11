@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { createDemoBackend } from "./demo";
-import { formatBytes, percent } from "./format";
+import { formatAge, formatBytes, formatDuration, percent } from "./format";
+
+const DAY = 86_400;
+/** Fixed "now" (2026-10-12 00:00 UTC) so age tests do not depend on the clock. */
+const NOW_MS = Date.UTC(2026, 9, 12);
+const NOW_SECS = NOW_MS / 1000;
 
 describe("formatBytes", () => {
   it("uses binary units like Windows Explorer", () => {
@@ -12,25 +16,31 @@ describe("formatBytes", () => {
   });
 });
 
-describe("demo backend", () => {
-  it("scans, reports hogs and frees space on trash", async () => {
-    const b = createDemoBackend();
-    const progress: number[] = [];
-    const done = await b.scan("C:\\", (p) => progress.push(p.files));
-    expect(done.cancelled).toBe(false);
-    expect(progress.length).toBeGreaterThan(5);
+describe("formatAge", () => {
+  it("describes the age relative to nowMs in Thai", () => {
+    expect(formatAge(NOW_SECS - 3_600, NOW_MS)).toBe("วันนี้");
+    expect(formatAge(NOW_SECS - 12 * DAY, NOW_MS)).toBe("12 วันก่อน");
+    expect(formatAge(NOW_SECS - 90 * DAY, NOW_MS)).toBe("3 เดือนก่อน");
+    expect(formatAge(NOW_SECS - 730 * DAY, NOW_MS)).toBe("2 ปีก่อน");
+    expect(formatAge(NOW_SECS - 760 * DAY, NOW_MS)).toBe("2 ปี 1 เดือนก่อน");
+  });
 
-    const report = await b.getReport();
-    const ids = report.hogs.map((h) => h.id);
-    expect(ids).toEqual(expect.arrayContaining(["temp", "node-modules", "recycle-bin", "virtual-disks", "windows-old", "system-file"]));
-    const nm = report.hogs.find((h) => h.id === "node-modules");
-    expect(nm?.count).toBe(5);
+  it("returns ไม่ทราบ when the timestamp is missing", () => {
+    expect(formatAge(null, NOW_MS)).toBe("ไม่ทราบ");
+    expect(formatAge(undefined, NOW_MS)).toBe("ไม่ทราบ");
+    expect(formatAge(0, NOW_MS)).toBe("ไม่ทราบ");
+  });
+});
 
-    const loc = report.hogs.find((h) => h.id === "temp" && h.locations[0]?.path.includes("AppData"))?.locations[0];
-    expect(loc).toBeDefined();
-    const before = (await b.getNode([])).size;
-    const freed = await b.moveToTrash({ path: loc?.path ?? "", dirIds: loc?.ids ?? [] });
-    expect(freed).toBe(loc?.size);
-    expect((await b.getNode([])).size).toBe(before - freed);
+describe("formatDuration", () => {
+  it("shows seconds below one minute", () => {
+    expect(formatDuration(0)).toBe("0 วินาที");
+    expect(formatDuration(1_500)).toBe("1.5 วินาที");
+    expect(formatDuration(59_000)).toBe("59 วินาที");
+  });
+
+  it("shows minutes and seconds from one minute up", () => {
+    expect(formatDuration(90_000)).toBe("1 นาที 30 วินาที");
+    expect(formatDuration(73_600)).toBe("1 นาที 14 วินาที");
   });
 });

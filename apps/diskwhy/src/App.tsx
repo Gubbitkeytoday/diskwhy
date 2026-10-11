@@ -2,15 +2,22 @@ import { Button, toast, useTheme } from "@nova/ui";
 import { MoonIcon, ScanSearchIcon, SunIcon } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { ResultsScreen } from "./components/results";
-import { HomeScreen, ScanningScreen } from "./components/screens";
+import { HomeScreen, NotInAppScreen, ScanningScreen, StartupErrorScreen } from "./components/screens";
 import { type Backend, getBackend } from "./lib/backend";
 import { formatBytes, formatDuration } from "./lib/format";
 import type { DriveInfo, ProgressEvent, Report } from "./lib/types";
 
 type View = { name: "home" } | { name: "scanning"; path: string } | { name: "results"; path: string };
 
+/** Message `getBackend()` rejects with when the page runs outside the desktop app. */
+const NOT_IN_APP = "NOT_IN_APP";
+
+/** Tauri rejects with plain strings; `getBackend()` rejects with an Error. */
+const errorMessage = (e: unknown) => (e instanceof Error ? e.message : String(e));
+
 export function App() {
   const [backend, setBackend] = useState<Backend | null>(null);
+  const [startupError, setStartupError] = useState<string | null>(null);
   const [drives, setDrives] = useState<DriveInfo[]>([]);
   const [view, setView] = useState<View>({ name: "home" });
   const [progress, setProgress] = useState<ProgressEvent | null>(null);
@@ -23,7 +30,7 @@ export function App() {
         setBackend(b);
         setDrives(await b.listDrives());
       })
-      .catch((e) => toast.error(`เริ่มต้นไม่สำเร็จ: ${e}`));
+      .catch((e: unknown) => setStartupError(errorMessage(e)));
   }, []);
 
   const refreshReport = useCallback(async () => {
@@ -86,19 +93,27 @@ export function App() {
         </Button>
       </header>
       <main className="flex flex-1">
-        {view.name === "home" && <HomeScreen drives={drives} loading={!backend} onScan={scan} onPick={pick} demo={backend?.kind === "demo"} />}
-        {view.name === "scanning" && <ScanningScreen path={view.path} progress={progress} onCancel={cancel} />}
-        {view.name === "results" && backend && report && (
-          <ResultsScreen
-            backend={backend}
-            report={report}
-            onRescan={() => scan(view.path)}
-            onHome={() => {
-              setView({ name: "home" });
-              void backend.listDrives().then(setDrives);
-            }}
-            onReportChange={refreshReport}
-          />
+        {startupError === NOT_IN_APP ? (
+          <NotInAppScreen />
+        ) : startupError !== null ? (
+          <StartupErrorScreen message={startupError} />
+        ) : (
+          <>
+            {view.name === "home" && <HomeScreen drives={drives} loading={!backend} onScan={scan} onPick={pick} />}
+            {view.name === "scanning" && <ScanningScreen path={view.path} progress={progress} onCancel={cancel} />}
+            {view.name === "results" && backend && report && (
+              <ResultsScreen
+                backend={backend}
+                report={report}
+                onRescan={() => scan(view.path)}
+                onHome={() => {
+                  setView({ name: "home" });
+                  void backend.listDrives().then(setDrives);
+                }}
+                onReportChange={refreshReport}
+              />
+            )}
+          </>
         )}
       </main>
     </div>

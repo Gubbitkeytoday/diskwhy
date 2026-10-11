@@ -6,6 +6,9 @@
 //! * Cloud placeholders (OneDrive "online-only") report their full size but use no local space;
 //!   they are counted separately instead of inflating the totals.
 //! * Memory stays bounded: files below `BIG_FILE` are aggregated per directory instead of stored.
+//! * Every file's last-write time (from the same `FindNextFile` data, no extra syscall) feeds
+//!   `DirNode::newest`, and well-known project manifests set `DirNode::markers`: both power the
+//!   "unused / stale data" detectors in `insights`.
 
 use rayon::prelude::*;
 use std::collections::HashMap;
@@ -13,14 +16,74 @@ use std::fs;
 use std::path::Path;
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering::Relaxed};
+use std::time::UNIX_EPOCH;
 
 /// Files at least this large are kept individually (top-files list, treemap tiles).
 pub const BIG_FILE: u64 = 1024 * 1024;
+
+/* ── Project markers (`DirNode::markers` bit flags) ──────────────────────── */
+
+/// `package.json`
+pub const MARKER_JS: u16 = 1 << 0;
+/// `Cargo.toml`
+pub const MARKER_RUST: u16 = 1 << 1;
+/// `pyproject.toml`, `requirements.txt`, `setup.py`
+pub const MARKER_PYTHON: u16 = 1 << 2;
+/// `build.gradle`, `build.gradle.kts`, `settings.gradle`, `settings.gradle.kts`
+pub const MARKER_GRADLE: u16 = 1 << 3;
+/// `pom.xml`
+pub const MARKER_MAVEN: u16 = 1 << 4;
+/// `*.csproj`, `*.fsproj`, `*.sln`
+pub const MARKER_DOTNET: u16 = 1 << 5;
+/// `go.mod`
+pub const MARKER_GO: u16 = 1 << 6;
+/// `composer.json`
+pub const MARKER_PHP: u16 = 1 << 7;
+/// `Gemfile`
+pub const MARKER_RUBY: u16 = 1 << 8;
+/// `pubspec.yaml`
+pub const MARKER_DART: u16 = 1 << 9;
+
+/// Exact (case-insensitive) file names that mark a directory as a developer project.
+const MARKER_FILES: &[(&str, u16)] = &[
+    ("package.json", MARKER_JS),
+    ("Cargo.toml", MARKER_RUST),
+    ("pyproject.toml", MARKER_PYTHON),
+    ("requirements.txt", MARKER_PYTHON),
+    ("setup.py", MARKER_PYTHON),
+    ("build.gradle", MARKER_GRADLE),
+    ("build.gradle.kts", MARKER_GRADLE),
+    ("settings.gradle", MARKER_GRADLE),
+    ("settings.gradle.kts", MARKER_GRADLE),
+    ("pom.xml", MARKER_MAVEN),
+    ("go.mod", MARKER_GO),
+    ("composer.json", MARKER_PHP),
+    ("Gemfile", MARKER_RUBY),
+    ("pubspec.yaml", MARKER_DART),
+];
+
+/// Project-marker flag for a file name (0 if it is not a manifest). Allocation-free.
+pub fn marker_of(name: &str) -> u16 {
+    if let Some(&(_, flag)) = MARKER_FILES.iter().find(|(n, _)| name.eq_ignore_ascii_case(n)) {
+        return flag;
+    }
+    match name.rsplit_once('.') {
+        Some((stem, ext)) if !stem.is_empty() && ["csproj", "fsproj", "sln"].iter().any(|e| ext.eq_ignore_ascii_case(e)) => MARKER_DOTNET,
+        _ => 0,
+    }
+}
+
+/// Last-write time as unix seconds; 0 if the platform/file system does not provide one.
+fn unix_secs(meta: &fs::Metadata) -> u64 {
+    meta.modified().ok().and_then(|t| t.duration_since(UNIX_EPOCH).ok()).map_or(0, |d| d.as_secs())
+}
 
 #[derive(Debug, Clone)]
 pub struct FileEntry {
     pub name: Box<str>,
     pub size: u64,
+    /// Last-write time, unix seconds (0 if unavailable).
+    pub modified: u64,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -37,6 +100,13 @@ pub struct DirNode {
     pub small_size: u64,
     /// The directory could not be read (permissions, in use, …).
     pub denied: bool,
+    /// Newest last-write time (unix seconds) of ALL files in this subtree, small ones included (0 = none/unknown).
+    /// After `remove_from_tree` this is only an upper bound.
+    pub newest: u64,
+    /// Newest last-write time of the files directly inside this directory.
+    pub own_newest: u64,
+    /// `MARKER_*` flags for project manifests that sit directly in this directory.
+    pub markers: u16,
 }
 
 impl DirNode {
@@ -125,6 +195,9 @@ pub fn scan_dir(path: &Path, name: Box<str>, ctx: &ScanCtx) -> DirNode {
         let file_name = entry.file_name();
         let file_name = file_name.to_string_lossy();
         node.files += 1;
+        let modified = unix_secs(&meta);
+        node.own_newest = node.own_newest.max(modified);
+        node.markers |= marker_of(&file_name);
 
         if is_cloud_placeholder(&meta) {
             ctx.progress.cloud_bytes.fetch_add(meta.len(), Relaxed);
@@ -136,7 +209,7 @@ pub fn scan_dir(path: &Path, name: Box<str>, ctx: &ScanCtx) -> DirNode {
         e.0 += size;
         e.1 += 1;
         if size >= BIG_FILE {
-            node.big_files.push(FileEntry { name: file_name.into(), size });
+            node.big_files.push(FileEntry { name: file_name.into(), size, modified });
         } else {
             node.small_count += 1;
             node.small_size += size;
@@ -167,6 +240,7 @@ pub fn scan_dir(path: &Path, name: Box<str>, ctx: &ScanCtx) -> DirNode {
         })
         .collect();
 
+    node.newest = node.children.iter().map(|c| c.newest).fold(node.own_newest, u64::max);
     node.size = file_bytes + node.children.iter().map(|c| c.size).sum::<u64>();
     node.files += node.children.iter().map(|c| c.files).sum::<u64>();
     node.dirs = node.children.len() as u64 + node.children.iter().map(|c| c.dirs).sum::<u64>();
@@ -276,6 +350,69 @@ mod tests {
         let video = remove_from_tree(&mut root, &[], Some("video.mp4"));
         assert_eq!(video, Some(3 * 1024 * 1024));
         assert!(root.big_files.is_empty());
+    }
+
+    fn set_mtime(path: &Path, unix: u64) {
+        let f = fs::OpenOptions::new().write(true).open(path).unwrap();
+        f.set_modified(UNIX_EPOCH + std::time::Duration::from_secs(unix)).unwrap();
+    }
+
+    #[test]
+    fn records_mtime_newest_and_markers() {
+        const OLD: u64 = 1_000_000_000; // 2001-09-09
+        const MID: u64 = 1_500_000_000; // 2017-07-14
+        let dir = tempfile::tempdir().unwrap();
+        let r = dir.path();
+        write(&r.join("app/package.json"), 20);
+        write(&r.join("app/src/index.js"), 10);
+        write(&r.join("app/big.bin"), 2 * 1024 * 1024);
+        write(&r.join("rust/Cargo.toml"), 20);
+        write(&r.join("rust/target/out.o"), 10);
+        write(&r.join("dotnet/App.CSPROJ"), 20);
+        write(&r.join("plain/readme.txt"), 5);
+        set_mtime(&r.join("app/big.bin"), OLD);
+        set_mtime(&r.join("app/src/index.js"), MID);
+        set_mtime(&r.join("plain/readme.txt"), OLD);
+
+        let (p, c) = (Progress::default(), AtomicBool::new(false));
+        let root = scan_dir(r, "root".into(), &ScanCtx::new(&p, &c));
+        let node = |n: &str| root.children.iter().find(|c| &*c.name == n).unwrap();
+
+        // big file keeps its own mtime
+        let big = &node("app").big_files[0];
+        assert_eq!(&*big.name, "big.bin");
+        assert_eq!(big.modified, OLD);
+        // small files feed newest too: src/index.js is MID, package.json is "now"
+        assert_eq!(node("app").children[0].newest, MID);
+        assert_eq!(node("app").children[0].own_newest, MID);
+        assert!(node("app").own_newest > MID, "package.json was just written");
+        assert_eq!(node("app").newest, node("app").own_newest);
+        assert_eq!(node("plain").newest, OLD);
+        assert!(root.newest > MID && root.own_newest == 0, "root has no direct files");
+
+        assert_eq!(node("app").markers, MARKER_JS);
+        assert_eq!(node("rust").markers, MARKER_RUST);
+        assert_eq!(node("dotnet").markers, MARKER_DOTNET, "extension match is case-insensitive");
+        assert_eq!(node("plain").markers, 0);
+        assert_eq!(node("app").children[0].markers, 0, "markers are per directory, not inherited");
+    }
+
+    #[test]
+    fn marker_names() {
+        assert_eq!(marker_of("package.json"), MARKER_JS);
+        assert_eq!(marker_of("Package.JSON"), MARKER_JS);
+        assert_eq!(marker_of("requirements.txt"), MARKER_PYTHON);
+        assert_eq!(marker_of("build.gradle.kts"), MARKER_GRADLE);
+        assert_eq!(marker_of("pom.xml"), MARKER_MAVEN);
+        assert_eq!(marker_of("My.Solution.sln"), MARKER_DOTNET);
+        assert_eq!(marker_of("lib.fsproj"), MARKER_DOTNET);
+        assert_eq!(marker_of("pubspec.yaml"), MARKER_DART);
+        assert_eq!(marker_of("go.mod"), MARKER_GO);
+        assert_eq!(marker_of("Gemfile"), MARKER_RUBY);
+        assert_eq!(marker_of("composer.json"), MARKER_PHP);
+        assert_eq!(marker_of(".sln"), 0);
+        assert_eq!(marker_of("package.json.bak"), 0);
+        assert_eq!(marker_of("ไฟล์.txt"), 0);
     }
 
     /// Real-world benchmark (read-only): `DISKWHY_BENCH=C:\ cargo test --release bench_real -- --ignored --nocapture`

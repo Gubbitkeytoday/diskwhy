@@ -1,7 +1,7 @@
 import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, cn } from "@nova/ui";
-import { ChevronDownIcon, FolderIcon, MapIcon, SparklesIcon } from "lucide-react";
+import { ChevronDownIcon, ClockIcon, FolderIcon, MapIcon, SparklesIcon } from "lucide-react";
 import { useState } from "react";
-import { CATEGORY_META, formatBytes, formatNumber, percent, SAFETY_META } from "../lib/format";
+import { CATEGORY_META, formatAge, formatBytes, formatNumber, percent, SAFETY_META } from "../lib/format";
 import type { Hog, Location, Report } from "../lib/types";
 
 export function Verdict({ report }: { report: Report }) {
@@ -37,6 +37,9 @@ export function Verdict({ report }: { report: Report }) {
   );
 }
 
+/** Hogs that mean "not used for a long time" (found by last-modified age, not by what they are). */
+const STALE_HOG_IDS = new Set(["stale-projects", "stale-large-files", "old-installers", "orphaned-appdata"]);
+
 function HogCard({ hog, total, onShow, onReveal }: { hog: Hog; total: number; onShow: (l: Location) => void; onReveal: (path: string) => void }) {
   const [open, setOpen] = useState(false);
   const meta = SAFETY_META[hog.safety];
@@ -54,6 +57,11 @@ function HogCard({ hog, total, onShow, onReveal }: { hog: Hog; total: number; on
             <Badge variant={meta.variant} title={meta.hint}>
               {meta.label}
             </Badge>
+            {STALE_HOG_IDS.has(hog.id) && (
+              <Badge variant="outline" title="ตรวจพบจากวันที่ใช้งานล่าสุด">
+                <ClockIcon /> ไม่ได้ใช้นาน
+              </Badge>
+            )}
             {hog.count > 1 && <span className="text-xs text-muted-foreground">{formatNumber(hog.count)} ตำแหน่ง</span>}
           </div>
           <p className="mt-1 text-sm text-muted-foreground">{hog.advice}</p>
@@ -70,8 +78,17 @@ function HogCard({ hog, total, onShow, onReveal }: { hog: Hog; total: number; on
         <ul className="divide-y border-t text-sm">
           {hog.locations.map((l) => (
             <li key={l.path} className="flex items-center gap-2 px-4 py-2">
-              <span className="min-w-0 flex-1 truncate font-mono text-xs" title={l.path}>
-                {l.path}
+              <span className="min-w-0 flex-1">
+                <span className="block truncate font-mono text-xs" title={l.path}>
+                  {l.path}
+                </span>
+                {(l.last_used || l.note) && (
+                  <span className="mt-0.5 block text-xs text-muted-foreground">
+                    {l.last_used ? `ใช้ล่าสุด ${formatAge(l.last_used)}` : null}
+                    {l.last_used && l.note ? " · " : null}
+                    {l.note}
+                  </span>
+                )}
               </span>
               <span className="w-20 shrink-0 text-right text-xs tabular-nums">{formatBytes(l.size)}</span>
               {l.ids.length > 0 && (

@@ -1,9 +1,19 @@
-// One interface, two implementations: the real Rust backend (inside Tauri) and an in-browser demo
-// (for UI development, tests and the shareable preview). UI code never imports Tauri directly.
-import type { DoneEvent, DriveInfo, NodeView, ProgressEvent, Report, TrashTarget } from "./types";
+// The only data source is the Rust backend running inside the DiskWhy desktop app (Tauri).
+// There is deliberately no mock/demo implementation: every number on screen comes from this machine.
+import type {
+  AiKeyStatus,
+  AiProgress,
+  AiResult,
+  DoneEvent,
+  DriveInfo,
+  NodeView,
+  ProgressEvent,
+  Report,
+  SystemTool,
+  TrashTarget,
+} from "./types";
 
 export interface Backend {
-  kind: "native" | "demo";
   listDrives(): Promise<DriveInfo[]>;
   pickFolder(): Promise<string | null>;
   /** Resolves when the scan finishes or is cancelled. */
@@ -14,6 +24,15 @@ export interface Backend {
   reveal(path: string): Promise<void>;
   /** Moves to the Recycle Bin. Returns bytes freed. */
   moveToTrash(target: TrashTarget): Promise<number>;
+  /** Opens a built-in Windows tool (Storage Sense, Disk Cleanup, Apps & features, Recycle Bin). */
+  openSystemTool(tool: SystemTool): Promise<void>;
+
+  aiKeyStatus(): Promise<AiKeyStatus>;
+  /** Validates the format and stores the key in Windows Credential Manager (never in the WebView). */
+  aiSetKey(key: string): Promise<AiKeyStatus>;
+  aiClearKey(): Promise<AiKeyStatus>;
+  /** Haiku 5.5 classifies candidates, Sonnet 5.5 writes the cleanup plan. Progress via onProgress. */
+  aiAnalyze(options: { anonymize: boolean }, onProgress: (p: AiProgress) => void): Promise<AiResult>;
 }
 
 export const isNative = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
@@ -25,7 +44,6 @@ async function createNative(): Promise<Backend> {
   const { open } = await import("@tauri-apps/plugin-dialog");
 
   return {
-    kind: "native",
     listDrives: () => invoke<DriveInfo[]>("list_drives"),
     async pickFolder() {
       const picked = await open({ directory: true, multiple: false, title: "เลือกโฟลเดอร์ที่จะสแกน" });
@@ -36,30 +54,27 @@ async function createNative(): Promise<Backend> {
       const unlistenProgress = await listen<ProgressEvent>("scan-progress", (e) => {
         if (scanId === -1 || e.payload.scanId === scanId) onProgress(e.payload);
       });
+      let unlistenDone: (() => void) | undefined;
       try {
-        let unlistenDone: (() => void) | undefined;
-        try {
-          return await new Promise<DoneEvent>((resolve, reject) => {
-            const early: DoneEvent[] = []; // a tiny folder can finish before start_scan even returns its id
-            listen<DoneEvent>("scan-done", (e) => {
-              if (scanId === -1) early.push(e.payload);
-              else if (e.payload.scanId === scanId) resolve(e.payload);
+        return await new Promise<DoneEvent>((resolve, reject) => {
+          const early: DoneEvent[] = []; // a tiny folder can finish before start_scan even returns its id
+          listen<DoneEvent>("scan-done", (e) => {
+            if (scanId === -1) early.push(e.payload);
+            else if (e.payload.scanId === scanId) resolve(e.payload);
+          })
+            .then((u) => {
+              unlistenDone = u;
+              return invoke<number>("start_scan", { path });
             })
-              .then((u) => {
-                unlistenDone = u;
-                return invoke<number>("start_scan", { path });
-              })
-              .then((id) => {
-                scanId = id;
-                const hit = early.find((d) => d.scanId === id);
-                if (hit) resolve(hit);
-              })
-              .catch(reject);
-          });
-        } finally {
-          unlistenDone?.();
-        }
+            .then((id) => {
+              scanId = id;
+              const hit = early.find((d) => d.scanId === id);
+              if (hit) resolve(hit);
+            })
+            .catch(reject);
+        });
       } finally {
+        unlistenDone?.();
         unlistenProgress();
       }
     },
@@ -68,11 +83,27 @@ async function createNative(): Promise<Backend> {
     getNode: (ids) => invoke<NodeView>("get_node", { ids }),
     reveal: (path) => revealItemInDir(path),
     moveToTrash: (t) => invoke<number>("move_to_trash", { path: t.path, dirIds: t.dirIds, fileName: t.fileName ?? null }),
+    openSystemTool: (tool) => invoke("open_system_tool", { tool }),
+
+    aiKeyStatus: () => invoke<AiKeyStatus>("ai_key_status"),
+    aiSetKey: (key) => invoke<AiKeyStatus>("ai_set_key", { key }),
+    aiClearKey: () => invoke<AiKeyStatus>("ai_clear_key"),
+    async aiAnalyze(options, onProgress) {
+      const unlisten = await listen<AiProgress>("ai-progress", (e) => onProgress(e.payload));
+      try {
+        return await invoke<AiResult>("ai_analyze", { anonymize: options.anonymize });
+      } finally {
+        unlisten();
+      }
+    },
   };
 }
 
 let instance: Promise<Backend> | null = null;
+
+/** Rejects outside the desktop app — callers show the "open in DiskWhy" screen instead of fake data. */
 export function getBackend(): Promise<Backend> {
-  instance ??= isNative ? createNative() : import("./demo").then((m) => m.createDemoBackend());
+  if (!isNative) return Promise.reject(new Error("NOT_IN_APP"));
+  instance ??= createNative();
   return instance;
 }

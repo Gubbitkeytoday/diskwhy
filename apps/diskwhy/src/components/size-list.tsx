@@ -8,7 +8,7 @@ import {
   DropdownMenuTrigger,
 } from "@nova/ui";
 import { ChevronRightIcon, FileIcon, FolderIcon, FolderOpenIcon, LockIcon, MoreHorizontalIcon, Trash2Icon } from "lucide-react";
-import { CATEGORY_META, formatBytes, percent, tileColor } from "../lib/format";
+import { CATEGORY_META, formatAge, formatBytes, percent, tileColor } from "../lib/format";
 import type { ChildView } from "../lib/types";
 
 interface Props {
@@ -19,6 +19,20 @@ interface Props {
   onTrash: (c: ChildView) => void;
   selected?: string | null;
   onSelect?: (c: ChildView) => void;
+}
+
+/** Second line under a row: what it contains and, for dirs/files, how long ago it was last modified. */
+function secondaryLine(c: ChildView): string {
+  if (c.kind === "dir") {
+    if (c.denied) return "ไม่มีสิทธิ์อ่าน";
+    const files = `${c.files.toLocaleString("th-TH")} ไฟล์`;
+    return c.newest > 0 ? `${files} · แก้ไขล่าสุด ${formatAge(c.newest)}` : files;
+  }
+  if (c.kind === "file") {
+    const label = c.category ? CATEGORY_META[c.category].label : "ไฟล์";
+    return c.newest > 0 ? `${label} · แก้ไขล่าสุด ${formatAge(c.newest)}` : label;
+  }
+  return "รวมไฟล์เล็กที่ต่ำกว่า 1 MB";
 }
 
 export function SizeList({ items, total, onOpen, onReveal, onTrash, selected, onSelect }: Props) {
@@ -51,13 +65,7 @@ export function SizeList({ items, total, onOpen, onReveal, onTrash, selected, on
                   <span className="block h-full rounded-full bg-primary/80" style={{ width: `${Math.max(1, (c.size / max) * 100)}%` }} />
                 </span>
                 <span className="mt-0.5 block truncate text-xs text-muted-foreground">
-                  {c.kind === "dir"
-                    ? c.denied
-                      ? "ไม่มีสิทธิ์อ่าน"
-                      : `${c.files.toLocaleString("th-TH")} ไฟล์`
-                    : c.category
-                      ? CATEGORY_META[c.category].label
-                      : "รวมไฟล์เล็กที่ต่ำกว่า 1 MB"}
+                  {secondaryLine(c)}
                 </span>
               </span>
               <span className="w-24 shrink-0 text-right">

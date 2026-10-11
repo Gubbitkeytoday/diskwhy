@@ -21,6 +21,18 @@ export function formatDuration(ms: number): string {
 
 export const percent = (part: number, whole: number) => (whole > 0 ? (part / whole) * 100 : 0);
 
+/** Unix seconds → Thai relative age, e.g. "วันนี้", "12 วันก่อน", "3 เดือนก่อน", "2 ปีก่อน". 0/null → "ไม่ทราบ". */
+export function formatAge(unixSecs: number | null | undefined, nowMs: number = Date.now()): string {
+  if (!unixSecs) return "ไม่ทราบ";
+  const days = Math.floor((nowMs / 1000 - unixSecs) / 86_400);
+  if (days < 1) return "วันนี้";
+  if (days < 30) return `${days} วันก่อน`;
+  if (days < 365) return `${Math.floor(days / 30)} เดือนก่อน`;
+  const years = Math.floor(days / 365);
+  const months = Math.floor((days % 365) / 30);
+  return months ? `${years} ปี ${months} เดือนก่อน` : `${years} ปีก่อน`;
+}
+
 export const CATEGORY_META: Record<Category, { label: string; color: string }> = {
   video: { label: "วิดีโอ", color: "oklch(0.62 0.2 25)" },
   image: { label: "รูปภาพ", color: "oklch(0.7 0.17 70)" },
