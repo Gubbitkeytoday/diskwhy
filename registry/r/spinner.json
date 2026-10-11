@@ -1,0 +1,18 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "spinner",
+  "type": "registry:ui",
+  "title": "Spinner",
+  "description": "Loading indicator.",
+  "dependencies": [],
+  "registryDependencies": [
+    "utils"
+  ],
+  "files": [
+    {
+      "path": "components/ui/spinner.tsx",
+      "type": "registry:ui",
+      "content": "import type * as React from \"react\";\nimport { cn } from \"@/lib/utils\";\n\nexport interface SpinnerProps extends React.ComponentProps<\"svg\"> {\n  /** Accessible label. Pass `null` when the spinner is decorative (e.g. inside a busy button). */\n  label?: string | null;\n}\n\nexport function Spinner({ className, label = \"Loading\", ...props }: SpinnerProps) {\n  return (\n    <svg\n      data-slot=\"spinner\"\n      viewBox=\"0 0 24 24\"\n      fill=\"none\"\n      role={label ? \"status\" : undefined}\n      aria-label={label ?? undefined}\n      aria-hidden={label ? undefined : true}\n      className={cn(\"size-4 animate-spin\", className)}\n      {...props}\n    >\n      <circle cx=\"12\" cy=\"12\" r=\"9\" stroke=\"currentColor\" strokeOpacity=\"0.25\" strokeWidth=\"3\" />\n      <path d=\"M21 12a9 9 0 0 0-9-9\" stroke=\"currentColor\" strokeWidth=\"3\" strokeLinecap=\"round\" />\n    </svg>\n  );\n}\n"
+    }
+  ]
+}

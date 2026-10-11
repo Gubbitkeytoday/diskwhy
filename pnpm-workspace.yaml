@@ -1,0 +1,9 @@
+packages:
+  - "packages/*"
+  - "apps/*"
+
+# pnpm 11 blocks dependency install scripts by default (supply-chain safety).
+# Only allow what is strictly needed; prebuilt binaries cover the rest.
+allowBuilds:
+  "@parcel/watcher": false
+  esbuild: false # platform binary ships via optionalDependencies

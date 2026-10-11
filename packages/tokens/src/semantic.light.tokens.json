@@ -1,0 +1,117 @@
+{
+  "$description": "Nova semantic color tokens — light mode. Names follow the shadcn/ui convention so the whole shadcn ecosystem works out of the box.",
+  "color": {
+    "$type": "color",
+    "background": {
+      "$value": "{palette.white}",
+      "$description": "Page background"
+    },
+    "foreground": {
+      "$value": "{palette.neutral.950}",
+      "$description": "Default text"
+    },
+    "card": {
+      "$value": "{palette.white}",
+      "$description": "Raised surface (cards, panels)"
+    },
+    "card-foreground": {
+      "$value": "{palette.neutral.950}"
+    },
+    "popover": {
+      "$value": "{palette.white}",
+      "$description": "Floating surface (menus, popovers)"
+    },
+    "popover-foreground": {
+      "$value": "{palette.neutral.950}"
+    },
+    "primary": {
+      "$value": "{palette.brand.600}",
+      "$description": "Primary action / brand emphasis"
+    },
+    "primary-foreground": {
+      "$value": "{palette.white}"
+    },
+    "secondary": {
+      "$value": "{palette.neutral.100}",
+      "$description": "Secondary action"
+    },
+    "secondary-foreground": {
+      "$value": "{palette.neutral.900}"
+    },
+    "muted": {
+      "$value": "{palette.neutral.100}",
+      "$description": "Subdued surface"
+    },
+    "muted-foreground": {
+      "$value": "{palette.neutral.600}",
+      "$description": "Secondary text, hints, placeholders"
+    },
+    "accent": {
+      "$value": "{palette.brand.50}",
+      "$description": "Hover / selected background"
+    },
+    "accent-foreground": {
+      "$value": "{palette.brand.800}"
+    },
+    "destructive": {
+      "$value": "{palette.red.600}",
+      "$description": "Destructive action / error"
+    },
+    "destructive-foreground": {
+      "$value": "{palette.white}"
+    },
+    "success": {
+      "$value": "{palette.green.700}",
+      "$description": "Success state"
+    },
+    "success-foreground": {
+      "$value": "{palette.white}"
+    },
+    "warning": {
+      "$value": "{palette.amber.400}",
+      "$description": "Warning state"
+    },
+    "warning-foreground": {
+      "$value": "{palette.amber.950}"
+    },
+    "info": {
+      "$value": "{palette.blue.600}",
+      "$description": "Informational state"
+    },
+    "info-foreground": {
+      "$value": "{palette.white}"
+    },
+    "border": {
+      "$value": "{palette.neutral.200}",
+      "$description": "Default border / divider"
+    },
+    "input": {
+      "$value": "{palette.neutral.300}",
+      "$description": "Form control border"
+    },
+    "ring": {
+      "$value": "{palette.brand.500}",
+      "$description": "Focus ring"
+    },
+    "chart-1": {
+      "$value": "{palette.brand.600}",
+      "$description": "Data series 1 (primary)"
+    },
+    "chart-2": {
+      "$value": "{palette.green.500}",
+      "$description": "Data series 2"
+    },
+    "chart-3": {
+      "$value": "{palette.amber.500}",
+      "$description": "Data series 3"
+    },
+    "chart-4": {
+      "$value": "{palette.blue.500}",
+      "$description": "Data series 4"
+    },
+    "chart-5": {
+      "$value": "{palette.red.400}",
+      "$description": "Data series 5"
+    }
+  }
+}

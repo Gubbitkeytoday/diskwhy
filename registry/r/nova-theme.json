@@ -1,0 +1,102 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "nova-theme",
+  "type": "registry:theme",
+  "title": "Nova theme",
+  "description": "Nova semantic colors (OKLCH, WCAG AA-gated), radius and status colors for any shadcn project.",
+  "cssVars": {
+    "theme": {
+      "color-success": "var(--success)",
+      "color-success-foreground": "var(--success-foreground)",
+      "color-warning": "var(--warning)",
+      "color-warning-foreground": "var(--warning-foreground)",
+      "color-info": "var(--info)",
+      "color-info-foreground": "var(--info-foreground)",
+      "ease-standard": "cubic-bezier(0.2, 0, 0, 1)",
+      "ease-emphasized": "cubic-bezier(0.3, 0, 0, 1)",
+      "animate-fade-in": "nv-fade-in 200ms cubic-bezier(0, 0, 0.2, 1)",
+      "animate-fade-out": "nv-fade-out 120ms cubic-bezier(0.4, 0, 1, 1) forwards",
+      "animate-scale-in": "nv-scale-in 200ms cubic-bezier(0.3, 0, 0, 1)",
+      "animate-scale-out": "nv-scale-out 120ms cubic-bezier(0.4, 0, 1, 1) forwards"
+    },
+    "light": {
+      "background": "oklch(1 0 0)",
+      "foreground": "oklch(0.26 0.006 262)",
+      "card": "oklch(1 0 0)",
+      "card-foreground": "oklch(0.26 0.006 262)",
+      "popover": "oklch(1 0 0)",
+      "popover-foreground": "oklch(0.26 0.006 262)",
+      "primary": "oklch(0.545 0.204 277)",
+      "primary-foreground": "oklch(1 0 0)",
+      "secondary": "oklch(0.967 0.004 262)",
+      "secondary-foreground": "oklch(0.34 0.008 262)",
+      "muted": "oklch(0.967 0.004 262)",
+      "muted-foreground": "oklch(0.545 0.013 262)",
+      "accent": "oklch(0.985 0.026 277)",
+      "accent-foreground": "oklch(0.4 0.151 277)",
+      "destructive": "oklch(0.545 0.204 25)",
+      "destructive-foreground": "oklch(1 0 0)",
+      "success": "oklch(0.47 0.14 152)",
+      "success-foreground": "oklch(1 0 0)",
+      "warning": "oklch(0.835 0.153 70)",
+      "warning-foreground": "oklch(0.26 0.068 70)",
+      "info": "oklch(0.545 0.171 245)",
+      "info-foreground": "oklch(1 0 0)",
+      "border": "oklch(0.928 0.006 262)",
+      "input": "oklch(0.872 0.01 262)",
+      "ring": "oklch(0.665 0.215 277)",
+      "radius": "0.5rem"
+    },
+    "dark": {
+      "background": "oklch(0.26 0.006 262)",
+      "foreground": "oklch(0.985 0.002 262)",
+      "card": "oklch(0.34 0.008 262)",
+      "card-foreground": "oklch(0.985 0.002 262)",
+      "popover": "oklch(0.34 0.008 262)",
+      "popover-foreground": "oklch(0.985 0.002 262)",
+      "primary": "oklch(0.775 0.194 277)",
+      "primary-foreground": "oklch(0.26 0.086 277)",
+      "secondary": "oklch(0.4 0.01 262)",
+      "secondary-foreground": "oklch(0.985 0.002 262)",
+      "muted": "oklch(0.4 0.01 262)",
+      "muted-foreground": "oklch(0.872 0.01 262)",
+      "accent": "oklch(0.34 0.118 277)",
+      "accent-foreground": "oklch(0.967 0.054 277)",
+      "destructive": "oklch(0.665 0.215 25)",
+      "destructive-foreground": "oklch(0.26 0.086 25)",
+      "success": "oklch(0.665 0.165 152)",
+      "success-foreground": "oklch(0.26 0.066 152)",
+      "warning": "oklch(0.835 0.153 70)",
+      "warning-foreground": "oklch(0.26 0.068 70)",
+      "info": "oklch(0.775 0.162 245)",
+      "info-foreground": "oklch(0.26 0.072 245)",
+      "border": "oklch(0.4 0.01 262)",
+      "input": "oklch(0.47 0.012 262)",
+      "ring": "oklch(0.775 0.194 277)"
+    }
+  },
+  "css": {
+    "@keyframes nv-fade-in": {
+      "from": {
+        "opacity": "0"
+      }
+    },
+    "@keyframes nv-fade-out": {
+      "to": {
+        "opacity": "0"
+      }
+    },
+    "@keyframes nv-scale-in": {
+      "from": {
+        "opacity": "0",
+        "scale": "0.96"
+      }
+    },
+    "@keyframes nv-scale-out": {
+      "to": {
+        "opacity": "0",
+        "scale": "0.96"
+      }
+    }
+  }
+}

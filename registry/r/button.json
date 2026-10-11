@@ -1,0 +1,23 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "button",
+  "type": "registry:ui",
+  "title": "Button",
+  "description": "Action trigger with variants, sizes, loading and asChild.",
+  "dependencies": [
+    "class-variance-authority",
+    "radix-ui"
+  ],
+  "registryDependencies": [
+    "utils",
+    "https://nova.example.com/r/nova-focus.json",
+    "https://nova.example.com/r/spinner.json"
+  ],
+  "files": [
+    {
+      "path": "components/ui/button.tsx",
+      "type": "registry:ui",
+      "content": "import { cva, type VariantProps } from \"class-variance-authority\";\nimport { Slot } from \"radix-ui\";\nimport type * as React from \"react\";\nimport { cn } from \"@/lib/utils\";\nimport { disabledState, focusRing } from \"@/lib/focus\";\nimport { Spinner } from \"@/components/ui/spinner\";\n\nexport const buttonVariants = cva(\n  [\n    \"relative inline-flex shrink-0 cursor-pointer select-none items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium\",\n    \"transition-[color,background-color,border-color,box-shadow,scale] duration-150 ease-standard active:scale-[0.98]\",\n    \"[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4\",\n    focusRing,\n    disabledState,\n  ],\n  {\n    variants: {\n      variant: {\n        primary: \"bg-primary text-primary-foreground shadow-xs hover:bg-primary/90\",\n        secondary: \"bg-secondary text-secondary-foreground hover:bg-secondary/75\",\n        outline: \"border border-input bg-background shadow-xs hover:bg-accent hover:text-accent-foreground\",\n        ghost: \"hover:bg-accent hover:text-accent-foreground\",\n        destructive:\n          \"bg-destructive text-destructive-foreground shadow-xs hover:bg-destructive/90 focus-visible:ring-destructive/40\",\n        link: \"h-auto px-0 text-primary underline-offset-4 hover:underline active:scale-100\",\n      },\n      size: {\n        sm: \"h-8 gap-1.5 px-3 text-xs [&_svg:not([class*='size-'])]:size-3.5\",\n        md: \"h-10 px-4 text-sm\",\n        lg: \"h-12 px-6 text-base\",\n        icon: \"size-10\",\n        \"icon-sm\": \"size-8\",\n      },\n    },\n    defaultVariants: { variant: \"primary\", size: \"md\" },\n  },\n);\n\nexport interface ButtonProps extends React.ComponentProps<\"button\">, VariantProps<typeof buttonVariants> {\n  /** Render the child element (e.g. a router `<Link>`) with button styles instead of a `<button>`. */\n  asChild?: boolean;\n  /** Shows a spinner, sets `aria-busy` and blocks interaction while keeping the button's width stable. */\n  loading?: boolean;\n}\n\nexport function Button({\n  className,\n  variant,\n  size,\n  asChild = false,\n  loading = false,\n  disabled,\n  children,\n  type,\n  ...props\n}: ButtonProps) {\n  const classes = cn(buttonVariants({ variant, size }), className);\n\n  if (asChild) {\n    return (\n      <Slot.Root data-slot=\"button\" className={classes} {...props}>\n        {children}\n      </Slot.Root>\n    );\n  }\n\n  return (\n    <button\n      data-slot=\"button\"\n      type={type ?? \"button\"}\n      className={classes}\n      disabled={disabled || loading}\n      aria-busy={loading || undefined}\n      {...props}\n    >\n      {loading && (\n        <span className=\"absolute inset-0 flex items-center justify-center\">\n          <Spinner label={null} />\n        </span>\n      )}\n      <span className={cn(\"contents\", loading && \"[&>*]:invisible\")}>\n        {typeof children === \"string\" ? <span>{children}</span> : children}\n      </span>\n    </button>\n  );\n}\n"
+    }
+  ]
+}

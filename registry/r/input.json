@@ -1,0 +1,20 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "input",
+  "type": "registry:ui",
+  "title": "Input",
+  "description": "Input and auto-growing Textarea.",
+  "dependencies": [],
+  "registryDependencies": [
+    "utils",
+    "https://nova.example.com/r/nova-focus.json",
+    "https://nova.example.com/r/field.json"
+  ],
+  "files": [
+    {
+      "path": "components/ui/input.tsx",
+      "type": "registry:ui",
+      "content": "import type * as React from \"react\";\nimport { cn } from \"@/lib/utils\";\nimport { focusRing, invalidRing } from \"@/lib/focus\";\nimport { useFieldControl } from \"@/components/ui/field\";\n\nconst controlBase = [\n  \"w-full min-w-0 rounded-md border border-input bg-background text-sm shadow-xs\",\n  \"transition-[color,border-color,box-shadow] duration-150 ease-standard\",\n  \"placeholder:text-muted-foreground focus-visible:border-ring\",\n  \"disabled:cursor-not-allowed disabled:opacity-50\",\n  focusRing,\n  invalidRing,\n];\n\nexport function Input({ className, type = \"text\", ...props }: React.ComponentProps<\"input\">) {\n  const fieldProps = useFieldControl(props);\n  return (\n    <input\n      data-slot=\"input\"\n      type={type}\n      className={cn(\n        controlBase,\n        \"flex h-10 px-3 py-2\",\n        \"file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground\",\n        className,\n      )}\n      {...fieldProps}\n    />\n  );\n}\n\nexport function Textarea({ className, ...props }: React.ComponentProps<\"textarea\">) {\n  const fieldProps = useFieldControl(props);\n  return (\n    <textarea\n      data-slot=\"textarea\"\n      className={cn(controlBase, \"field-sizing-content flex min-h-20 px-3 py-2\", className)}\n      {...fieldProps}\n    />\n  );\n}\n"
+    }
+  ]
+}

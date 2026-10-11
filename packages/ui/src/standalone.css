@@ -1,0 +1,4 @@
+/* Precompiled bundle entry (dist/nova.css) for apps that don't run Tailwind themselves. */
+@import "tailwindcss";
+@import "./styles.css";
+@source "./";

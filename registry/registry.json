@@ -1,0 +1,328 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry.json",
+  "name": "nova",
+  "homepage": "https://nova.example.com",
+  "items": [
+    {
+      "name": "nova-focus",
+      "type": "registry:lib",
+      "title": "Nova focus utilities",
+      "description": "Shared focus/invalid/disabled class strings used by every Nova control.",
+      "files": [
+        {
+          "path": "r/nova-focus.json",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
+      "name": "badge",
+      "type": "registry:ui",
+      "title": "Badge",
+      "description": "Status / count label with semantic variants.",
+      "dependencies": [
+        "class-variance-authority",
+        "radix-ui"
+      ],
+      "registryDependencies": [
+        "utils",
+        "https://nova.example.com/r/nova-focus.json"
+      ],
+      "files": [
+        {
+          "path": "r/badge.json",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "button",
+      "type": "registry:ui",
+      "title": "Button",
+      "description": "Action trigger with variants, sizes, loading and asChild.",
+      "dependencies": [
+        "class-variance-authority",
+        "radix-ui"
+      ],
+      "registryDependencies": [
+        "utils",
+        "https://nova.example.com/r/nova-focus.json",
+        "https://nova.example.com/r/spinner.json"
+      ],
+      "files": [
+        {
+          "path": "r/button.json",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "card",
+      "type": "registry:ui",
+      "title": "Card",
+      "description": "Surface for grouping related content.",
+      "dependencies": [],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "r/card.json",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "checkbox",
+      "type": "registry:ui",
+      "title": "Checkbox",
+      "description": "Checkbox, Switch and RadioGroup form controls.",
+      "dependencies": [
+        "lucide-react",
+        "radix-ui"
+      ],
+      "registryDependencies": [
+        "utils",
+        "https://nova.example.com/r/nova-focus.json",
+        "https://nova.example.com/r/field.json"
+      ],
+      "files": [
+        {
+          "path": "r/checkbox.json",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "dialog",
+      "type": "registry:ui",
+      "title": "Dialog",
+      "description": "Modal dialog with focus trap, overlay and animations.",
+      "dependencies": [
+        "lucide-react",
+        "radix-ui"
+      ],
+      "registryDependencies": [
+        "utils",
+        "https://nova.example.com/r/nova-focus.json"
+      ],
+      "files": [
+        {
+          "path": "r/dialog.json",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "display",
+      "type": "registry:ui",
+      "title": "Display",
+      "description": "Avatar, Separator and Kbd.",
+      "dependencies": [
+        "radix-ui"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "r/display.json",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "dropdown-menu",
+      "type": "registry:ui",
+      "title": "Dropdown Menu",
+      "description": "Menu of actions with checkbox/radio items and submenus.",
+      "dependencies": [
+        "lucide-react",
+        "radix-ui"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "r/dropdown-menu.json",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "feedback",
+      "type": "registry:ui",
+      "title": "Feedback",
+      "description": "Alert, Toaster/toast (Sonner) and Skeleton.",
+      "dependencies": [
+        "class-variance-authority",
+        "lucide-react",
+        "sonner"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "r/feedback.json",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "field",
+      "type": "registry:ui",
+      "title": "Field",
+      "description": "Label + Field: automatic label/description/error ARIA wiring.",
+      "dependencies": [
+        "radix-ui"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "r/field.json",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "input",
+      "type": "registry:ui",
+      "title": "Input",
+      "description": "Input and auto-growing Textarea.",
+      "dependencies": [],
+      "registryDependencies": [
+        "utils",
+        "https://nova.example.com/r/nova-focus.json",
+        "https://nova.example.com/r/field.json"
+      ],
+      "files": [
+        {
+          "path": "r/input.json",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "overlay",
+      "type": "registry:ui",
+      "title": "Overlay",
+      "description": "Tooltip and Popover.",
+      "dependencies": [
+        "radix-ui"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "r/overlay.json",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "select",
+      "type": "registry:ui",
+      "title": "Select",
+      "description": "Accessible select built on Radix.",
+      "dependencies": [
+        "lucide-react",
+        "radix-ui"
+      ],
+      "registryDependencies": [
+        "utils",
+        "https://nova.example.com/r/nova-focus.json",
+        "https://nova.example.com/r/field.json"
+      ],
+      "files": [
+        {
+          "path": "r/select.json",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "spinner",
+      "type": "registry:ui",
+      "title": "Spinner",
+      "description": "Loading indicator.",
+      "dependencies": [],
+      "registryDependencies": [
+        "utils"
+      ],
+      "files": [
+        {
+          "path": "r/spinner.json",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "tabs",
+      "type": "registry:ui",
+      "title": "Tabs",
+      "description": "Tabbed navigation.",
+      "dependencies": [
+        "radix-ui"
+      ],
+      "registryDependencies": [
+        "utils",
+        "https://nova.example.com/r/nova-focus.json"
+      ],
+      "files": [
+        {
+          "path": "r/tabs.json",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "theme",
+      "type": "registry:ui",
+      "title": "Theme",
+      "description": "ThemeProvider, useTheme and a no-flash init script.",
+      "dependencies": [],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "r/theme.json",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "nova-theme",
+      "type": "registry:theme",
+      "title": "Nova theme",
+      "description": "Nova semantic colors (OKLCH, WCAG AA-gated), radius and status colors for any shadcn project.",
+      "css": {
+        "@keyframes nv-fade-in": {
+          "from": {
+            "opacity": "0"
+          }
+        },
+        "@keyframes nv-fade-out": {
+          "to": {
+            "opacity": "0"
+          }
+        },
+        "@keyframes nv-scale-in": {
+          "from": {
+            "opacity": "0",
+            "scale": "0.96"
+          }
+        },
+        "@keyframes nv-scale-out": {
+          "to": {
+            "opacity": "0",
+            "scale": "0.96"
+          }
+        }
+      }
+    }
+  ]
+}

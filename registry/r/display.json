@@ -1,0 +1,20 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "display",
+  "type": "registry:ui",
+  "title": "Display",
+  "description": "Avatar, Separator and Kbd.",
+  "dependencies": [
+    "radix-ui"
+  ],
+  "registryDependencies": [
+    "utils"
+  ],
+  "files": [
+    {
+      "path": "components/ui/display.tsx",
+      "type": "registry:ui",
+      "content": "import { Avatar as AvatarPrimitive, Separator as SeparatorPrimitive } from \"radix-ui\";\nimport type * as React from \"react\";\nimport { cn } from \"@/lib/utils\";\n\n/* ── Avatar ──────────────────────────────────────────────────────────────── */\n\nexport function Avatar({ className, ...props }: React.ComponentProps<typeof AvatarPrimitive.Root>) {\n  return (\n    <AvatarPrimitive.Root\n      data-slot=\"avatar\"\n      className={cn(\"relative flex size-9 shrink-0 overflow-hidden rounded-full\", className)}\n      {...props}\n    />\n  );\n}\n\nexport function AvatarImage({ className, ...props }: React.ComponentProps<typeof AvatarPrimitive.Image>) {\n  return <AvatarPrimitive.Image data-slot=\"avatar-image\" className={cn(\"aspect-square size-full object-cover\", className)} {...props} />;\n}\n\nexport function AvatarFallback({ className, ...props }: React.ComponentProps<typeof AvatarPrimitive.Fallback>) {\n  return (\n    <AvatarPrimitive.Fallback\n      data-slot=\"avatar-fallback\"\n      className={cn(\"flex size-full items-center justify-center rounded-full bg-muted text-sm font-medium\", className)}\n      {...props}\n    />\n  );\n}\n\n/* ── Separator ───────────────────────────────────────────────────────────── */\n\nexport function Separator({\n  className,\n  orientation = \"horizontal\",\n  decorative = true,\n  ...props\n}: React.ComponentProps<typeof SeparatorPrimitive.Root>) {\n  return (\n    <SeparatorPrimitive.Root\n      data-slot=\"separator\"\n      decorative={decorative}\n      orientation={orientation}\n      className={cn(\n        \"shrink-0 bg-border data-[orientation=horizontal]:h-px data-[orientation=horizontal]:w-full data-[orientation=vertical]:h-full data-[orientation=vertical]:w-px\",\n        className,\n      )}\n      {...props}\n    />\n  );\n}\n\n/* ── Kbd ─────────────────────────────────────────────────────────────────── */\n\nexport function Kbd({ className, ...props }: React.ComponentProps<\"kbd\">) {\n  return (\n    <kbd\n      data-slot=\"kbd\"\n      className={cn(\n        \"pointer-events-none inline-flex h-5 min-w-5 select-none items-center justify-center gap-1 rounded border bg-muted px-1 font-mono text-[0.7rem] font-medium text-muted-foreground\",\n        className,\n      )}\n      {...props}\n    />\n  );\n}\n"
+    }
+  ]
+}

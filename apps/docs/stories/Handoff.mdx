@@ -1,0 +1,57 @@
+import { Meta } from "@storybook/addon-docs/blocks";
+
+<Meta title="Handoff" />
+
+# Design ↔ Dev Handoff
+
+How designers, developers, QA and AI agents work from one source of truth.
+
+## 1. Tokens are the contract
+
+```
+packages/tokens/src/*.tokens.json   ← single source of truth (W3C DTCG format)
+        │  pnpm build (Style Dictionary 5)
+        ├─ dist/css/tokens.css        CSS variables (--nv-*) light + dark
+        ├─ dist/tailwind/theme.css    Tailwind v4 @theme (bg-primary, rounded-lg, shadow-md …)
+        ├─ dist/js/index.js (+ .d.ts) typed JS for charts, canvas, email
+        ├─ dist/figma/*.tokens.json   resolved values → Figma variables / Tokens Studio
+        └─ dist/dtcg/*.tokens.json    source with references → round-trip tools
+```
+
+**Designer → Dev:** edit variables in Figma → export DTCG (native variables export or Tokens Studio) →
+replace `packages/tokens/src/*.tokens.json` → open a PR. CI rebuilds and **fails if any text/background pair drops below WCAG AA**.
+
+**Dev → Designer:** import `@nova/tokens/figma/nova.light.tokens.json` and `nova.dark.tokens.json` as two modes of one variable collection.
+
+## 2. Naming map (Figma ⇄ code)
+
+| Figma variable | CSS variable | Tailwind class |
+| --- | --- | --- |
+| `color/primary` | `--nv-color-primary` | `bg-primary`, `text-primary`, `ring-primary` |
+| `color/muted-foreground` | `--nv-color-muted-foreground` | `text-muted-foreground` |
+| `palette/brand/600` | `--nv-palette-brand-600` | `bg-brand-600` (primitives — avoid in product UI) |
+| `radius/lg` | `--nv-radius-lg` | `rounded-lg` |
+| `shadow/md` | `--nv-shadow-md` | `shadow-md` |
+| `font/size/sm` + `font/line-height/sm` | `--nv-font-size-sm` | `text-sm` |
+
+Component props mirror Figma component properties: `variant`, `size`, `disabled`, `loading`, `asChild`.
+
+## 3. Definition of done for a component
+
+- [ ] Uses semantic tokens only (no hex, no palette steps)
+- [ ] All states: default, hover, focus-visible, active, disabled, loading, invalid, empty
+- [ ] Keyboard: Tab, Shift+Tab, Enter/Space, Escape, arrows where applicable
+- [ ] Screen reader name + role + state verified (axe passes in Vitest and Storybook a11y panel)
+- [ ] Light + dark checked; Thai copy checked for clipping
+- [ ] Story with controls + interaction test (`play`)
+- [ ] Changeset added (`pnpm changeset`)
+
+## 4. Spec checklist designers hand over
+
+Component name · variants & sizes · states · spacing in tokens (not px) · responsive behaviour ·
+copy (TH/EN) incl. error messages · motion (duration/easing token) · a11y notes (label, focus order).
+
+## 5. For AI coding agents
+
+`AGENTS.md` at the repo root describes the rules. The shadcn registry (`registry/*.json`) lets agents and
+`npx shadcn add` pull exact component source with dependencies resolved.

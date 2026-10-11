@@ -1,0 +1,12 @@
+@import "tailwindcss";
+@import "../../../packages/ui/src/styles.css";
+
+@source "../../../packages/ui/src";
+@source "../stories";
+
+/* Keep the docs canvas on-theme in both modes. */
+.sb-show-main,
+.docs-story {
+  background-color: var(--nv-color-background);
+  color: var(--nv-color-foreground);
+}

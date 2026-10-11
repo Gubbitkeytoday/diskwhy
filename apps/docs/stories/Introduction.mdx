@@ -1,0 +1,61 @@
+import { Meta } from "@storybook/addon-docs/blocks";
+
+<Meta title="Introduction" />
+
+# Nova Design System
+
+ระบบออกแบบสำหรับทีมโปรดักต์ — **tokens → components → docs → handoff** ในที่เดียว
+
+Nova is a token-driven React design system: accessible by default (Radix primitives + axe-tested),
+themeable (light/dark from one token source), Thai-first typography, and compatible with the shadcn/ui ecosystem.
+
+## Packages
+
+| Package | What it is |
+| --- | --- |
+| `@nova/tokens` | W3C DTCG tokens → CSS variables, Tailwind v4 theme, JS/TS, Figma-ready JSON. WCAG contrast-gated. |
+| `@nova/ui` | 25+ React 19 components (Radix + Tailwind v4 + CVA). Tree-shakeable ESM, RSC-ready (`"use client"`). |
+| `registry/` | shadcn-compatible registry: `npx shadcn add <url>/button.json` copies source into any app. |
+
+## Quick start
+
+```bash
+pnpm add @nova/ui @nova/tokens
+```
+
+```css
+/* app/globals.css — apps that use Tailwind v4 */
+@import "tailwindcss";
+@import "@nova/ui/styles.css";
+```
+
+```css
+/* apps without Tailwind: one precompiled file */
+@import "@nova/ui/nova.css";
+```
+
+```tsx
+import { Button, Field, Input, ThemeProvider, Toaster } from "@nova/ui";
+
+export function App() {
+  return (
+    <ThemeProvider>
+      <Field label="อีเมล" description="เราจะไม่เปิดเผยอีเมลของคุณ">
+        <Input type="email" />
+      </Field>
+      <Button>บันทึก</Button>
+      <Toaster />
+    </ThemeProvider>
+  );
+}
+```
+
+## Principles
+
+1. **Semantic over raw** — components only use semantic tokens (`bg-primary`, `text-muted-foreground`); palettes are swappable.
+2. **Accessible by construction** — focus rings, keyboard support, ARIA wiring (`<Field>`) and contrast are enforced by tests, not reviews.
+3. **Thai-first** — font stack, line heights and line-breaking tuned for Thai + Latin mixed text.
+4. **Own your code** — install as a package *or* copy source via the shadcn registry; same tokens either way.
+5. **Fast** — Vite 8 / Rolldown builds, Tailwind v4 engine, TypeScript 7 native compiler, Turborepo caching.
+
+Use the toolbar's **theme** switch (paintbrush icon) to preview every story in dark mode, and the **Accessibility** panel to inspect axe results live.

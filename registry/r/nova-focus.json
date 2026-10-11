@@ -1,0 +1,14 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "nova-focus",
+  "type": "registry:lib",
+  "title": "Nova focus utilities",
+  "description": "Shared focus/invalid/disabled class strings used by every Nova control.",
+  "files": [
+    {
+      "path": "lib/focus.ts",
+      "type": "registry:lib",
+      "content": "/** Shared interaction classes so every control has an identical, visible focus treatment. */\nexport const focusRing =\n  \"outline-none focus-visible:ring-[3px] focus-visible:ring-ring/45 focus-visible:ring-offset-0\";\n\nexport const invalidRing =\n  \"aria-invalid:border-destructive aria-invalid:ring-destructive/25 aria-invalid:focus-visible:ring-destructive/35\";\n\nexport const disabledState = \"disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50\";\n"
+    }
+  ]
+}

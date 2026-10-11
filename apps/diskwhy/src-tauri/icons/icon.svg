@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6d5dfc"/>
+      <stop offset="1" stop-color="#4338ca"/>
+    </linearGradient>
+  </defs>
+  <rect x="64" y="64" width="896" height="896" rx="200" fill="url(#bg)"/>
+  <!-- treemap tiles -->
+  <rect x="200" y="220" width="330" height="420" rx="36" fill="#fff" fill-opacity=".95"/>
+  <rect x="560" y="220" width="264" height="200" rx="36" fill="#fff" fill-opacity=".7"/>
+  <rect x="560" y="440" width="124" height="200" rx="30" fill="#fff" fill-opacity=".5"/>
+  <rect x="700" y="440" width="124" height="200" rx="30" fill="#fff" fill-opacity=".35"/>
+  <!-- usage bar -->
+  <rect x="200" y="690" width="624" height="96" rx="48" fill="#fff" fill-opacity=".25"/>
+  <rect x="200" y="690" width="520" height="96" rx="48" fill="#ffb547"/>
+</svg>

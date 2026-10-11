@@ -1,0 +1,21 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "tabs",
+  "type": "registry:ui",
+  "title": "Tabs",
+  "description": "Tabbed navigation.",
+  "dependencies": [
+    "radix-ui"
+  ],
+  "registryDependencies": [
+    "utils",
+    "https://nova.example.com/r/nova-focus.json"
+  ],
+  "files": [
+    {
+      "path": "components/ui/tabs.tsx",
+      "type": "registry:ui",
+      "content": "import { Tabs as TabsPrimitive } from \"radix-ui\";\nimport type * as React from \"react\";\nimport { cn } from \"@/lib/utils\";\nimport { focusRing } from \"@/lib/focus\";\n\nexport function Tabs({ className, ...props }: React.ComponentProps<typeof TabsPrimitive.Root>) {\n  return <TabsPrimitive.Root data-slot=\"tabs\" className={cn(\"flex flex-col gap-3\", className)} {...props} />;\n}\n\nexport function TabsList({ className, ...props }: React.ComponentProps<typeof TabsPrimitive.List>) {\n  return (\n    <TabsPrimitive.List\n      data-slot=\"tabs-list\"\n      className={cn(\n        \"inline-flex h-10 w-fit items-center justify-center rounded-lg bg-muted p-1 text-muted-foreground\",\n        className,\n      )}\n      {...props}\n    />\n  );\n}\n\nexport function TabsTrigger({ className, ...props }: React.ComponentProps<typeof TabsPrimitive.Trigger>) {\n  return (\n    <TabsPrimitive.Trigger\n      data-slot=\"tabs-trigger\"\n      className={cn(\n        \"inline-flex h-full flex-1 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-3 text-sm font-medium\",\n        \"transition-[color,background-color,box-shadow] duration-150 ease-standard hover:text-foreground\",\n        \"data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm\",\n        \"disabled:pointer-events-none disabled:opacity-50 [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4\",\n        focusRing,\n        className,\n      )}\n      {...props}\n    />\n  );\n}\n\nexport function TabsContent({ className, ...props }: React.ComponentProps<typeof TabsPrimitive.Content>) {\n  return (\n    <TabsPrimitive.Content\n      data-slot=\"tabs-content\"\n      className={cn(\"flex-1 rounded-md data-[state=active]:animate-fade-in\", focusRing, className)}\n      {...props}\n    />\n  );\n}\n"
+    }
+  ]
+}

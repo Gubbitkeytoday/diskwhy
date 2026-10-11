@@ -1,0 +1,21 @@
+@import "tailwindcss";
+@import "@nova/ui/styles.css";
+
+@source "../src";
+
+/* Desktop-app feel: no rubber-band scrolling, no accidental text selection on chrome. */
+html,
+body,
+#root {
+  height: 100%;
+  overscroll-behavior: none;
+}
+
+@keyframes nv-indeterminate {
+  0% {
+    translate: -100% 0;
+  }
+  100% {
+    translate: 300% 0;
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "checkbox",
+  "type": "registry:ui",
+  "title": "Checkbox",
+  "description": "Checkbox, Switch and RadioGroup form controls.",
+  "dependencies": [
+    "lucide-react",
+    "radix-ui"
+  ],
+  "registryDependencies": [
+    "utils",
+    "https://nova.example.com/r/nova-focus.json",
+    "https://nova.example.com/r/field.json"
+  ],
+  "files": [
+    {
+      "path": "components/ui/checkbox.tsx",
+      "type": "registry:ui",
+      "content": "import { CheckIcon, MinusIcon } from \"lucide-react\";\nimport { Checkbox as CheckboxPrimitive, RadioGroup as RadioGroupPrimitive, Switch as SwitchPrimitive } from \"radix-ui\";\nimport type * as React from \"react\";\nimport { cn } from \"@/lib/utils\";\nimport { focusRing, invalidRing } from \"@/lib/focus\";\nimport { useFieldControl } from \"@/components/ui/field\";\n\nexport function Checkbox({ className, ...props }: React.ComponentProps<typeof CheckboxPrimitive.Root>) {\n  const fieldProps = useFieldControl(props);\n  return (\n    <CheckboxPrimitive.Root\n      data-slot=\"checkbox\"\n      className={cn(\n        \"peer grid size-4.5 shrink-0 cursor-pointer place-content-center rounded-sm border border-input bg-background shadow-xs\",\n        \"transition-[background-color,border-color,box-shadow] duration-150 ease-standard\",\n        \"data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground\",\n        \"data-[state=indeterminate]:border-primary data-[state=indeterminate]:bg-primary data-[state=indeterminate]:text-primary-foreground\",\n        \"disabled:cursor-not-allowed disabled:opacity-50\",\n        focusRing,\n        invalidRing,\n        className,\n      )}\n      {...fieldProps}\n    >\n      <CheckboxPrimitive.Indicator className=\"group grid place-content-center text-current\">\n        <CheckIcon className=\"size-3.5 group-data-[state=indeterminate]:hidden\" strokeWidth={3} />\n        <MinusIcon className=\"hidden size-3.5 group-data-[state=indeterminate]:block\" strokeWidth={3} />\n      </CheckboxPrimitive.Indicator>\n    </CheckboxPrimitive.Root>\n  );\n}\n\nexport function Switch({ className, ...props }: React.ComponentProps<typeof SwitchPrimitive.Root>) {\n  const fieldProps = useFieldControl(props);\n  return (\n    <SwitchPrimitive.Root\n      data-slot=\"switch\"\n      className={cn(\n        \"peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent shadow-xs\",\n        \"transition-colors duration-200 ease-standard data-[state=checked]:bg-primary data-[state=unchecked]:bg-input\",\n        \"disabled:cursor-not-allowed disabled:opacity-50\",\n        focusRing,\n        className,\n      )}\n      {...fieldProps}\n    >\n      <SwitchPrimitive.Thumb\n        data-slot=\"switch-thumb\"\n        className={cn(\n          \"pointer-events-none block size-5 rounded-full bg-background shadow-sm ring-0\",\n          \"transition-transform duration-200 ease-emphasized data-[state=checked]:translate-x-5 data-[state=unchecked]:translate-x-0\",\n        )}\n      />\n    </SwitchPrimitive.Root>\n  );\n}\n\nexport function RadioGroup({ className, ...props }: React.ComponentProps<typeof RadioGroupPrimitive.Root>) {\n  return <RadioGroupPrimitive.Root data-slot=\"radio-group\" className={cn(\"grid gap-3\", className)} {...props} />;\n}\n\nexport function RadioGroupItem({ className, ...props }: React.ComponentProps<typeof RadioGroupPrimitive.Item>) {\n  return (\n    <RadioGroupPrimitive.Item\n      data-slot=\"radio-group-item\"\n      className={cn(\n        \"peer aspect-square size-4.5 shrink-0 cursor-pointer rounded-full border border-input bg-background text-primary shadow-xs\",\n        \"transition-[border-color,box-shadow] duration-150 ease-standard data-[state=checked]:border-primary\",\n        \"disabled:cursor-not-allowed disabled:opacity-50\",\n        focusRing,\n        invalidRing,\n        className,\n      )}\n      {...props}\n    >\n      <RadioGroupPrimitive.Indicator className=\"flex items-center justify-center\">\n        <span className=\"size-2.5 rounded-full bg-primary\" />\n      </RadioGroupPrimitive.Indicator>\n    </RadioGroupPrimitive.Item>\n  );\n}\n"
+    }
+  ]
+}

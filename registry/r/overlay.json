@@ -1,0 +1,20 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "overlay",
+  "type": "registry:ui",
+  "title": "Overlay",
+  "description": "Tooltip and Popover.",
+  "dependencies": [
+    "radix-ui"
+  ],
+  "registryDependencies": [
+    "utils"
+  ],
+  "files": [
+    {
+      "path": "components/ui/overlay.tsx",
+      "type": "registry:ui",
+      "content": "import { Popover as PopoverPrimitive, Tooltip as TooltipPrimitive } from \"radix-ui\";\nimport type * as React from \"react\";\nimport { cn } from \"@/lib/utils\";\n\n/* ── Tooltip ─────────────────────────────────────────────────────────────── */\n\nexport function TooltipProvider({ delayDuration = 200, ...props }: React.ComponentProps<typeof TooltipPrimitive.Provider>) {\n  return <TooltipPrimitive.Provider data-slot=\"tooltip-provider\" delayDuration={delayDuration} {...props} />;\n}\n\n/** Self-contained tooltip (includes its own provider), so it works without app-level setup. */\nexport function Tooltip(props: React.ComponentProps<typeof TooltipPrimitive.Root>) {\n  return (\n    <TooltipProvider>\n      <TooltipPrimitive.Root data-slot=\"tooltip\" {...props} />\n    </TooltipProvider>\n  );\n}\n\nexport const TooltipTrigger = TooltipPrimitive.Trigger;\n\nexport function TooltipContent({\n  className,\n  sideOffset = 6,\n  children,\n  ...props\n}: React.ComponentProps<typeof TooltipPrimitive.Content>) {\n  return (\n    <TooltipPrimitive.Portal>\n      <TooltipPrimitive.Content\n        data-slot=\"tooltip-content\"\n        sideOffset={sideOffset}\n        className={cn(\n          \"z-50 w-fit max-w-xs origin-(--radix-tooltip-content-transform-origin) rounded-md bg-foreground px-2.5 py-1.5 text-xs text-background shadow-md\",\n          \"animate-scale-in data-[state=closed]:animate-scale-out\",\n          className,\n        )}\n        {...props}\n      >\n        {children}\n        <TooltipPrimitive.Arrow className=\"fill-foreground\" width={10} height={5} />\n      </TooltipPrimitive.Content>\n    </TooltipPrimitive.Portal>\n  );\n}\n\n/* ── Popover ─────────────────────────────────────────────────────────────── */\n\nexport const Popover = PopoverPrimitive.Root;\nexport const PopoverTrigger = PopoverPrimitive.Trigger;\nexport const PopoverAnchor = PopoverPrimitive.Anchor;\n\nexport function PopoverContent({\n  className,\n  align = \"center\",\n  sideOffset = 6,\n  ...props\n}: React.ComponentProps<typeof PopoverPrimitive.Content>) {\n  return (\n    <PopoverPrimitive.Portal>\n      <PopoverPrimitive.Content\n        data-slot=\"popover-content\"\n        align={align}\n        sideOffset={sideOffset}\n        className={cn(\n          \"z-50 w-72 origin-(--radix-popover-content-transform-origin) rounded-lg border bg-popover p-4 text-popover-foreground shadow-lg outline-none\",\n          \"data-[state=open]:animate-scale-in data-[state=closed]:animate-scale-out\",\n          className,\n        )}\n        {...props}\n      />\n    </PopoverPrimitive.Portal>\n  );\n}\n"
+    }
+  ]
+}

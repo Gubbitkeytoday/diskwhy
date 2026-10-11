@@ -1,0 +1,96 @@
+{
+  "$description": "Nova semantic color tokens — dark mode. Names follow the shadcn/ui convention so the whole shadcn ecosystem works out of the box.",
+  "color": {
+    "$type": "color",
+    "background": {
+      "$value": "{palette.neutral.950}"
+    },
+    "foreground": {
+      "$value": "{palette.neutral.50}"
+    },
+    "card": {
+      "$value": "{palette.neutral.900}"
+    },
+    "card-foreground": {
+      "$value": "{palette.neutral.50}"
+    },
+    "popover": {
+      "$value": "{palette.neutral.900}"
+    },
+    "popover-foreground": {
+      "$value": "{palette.neutral.50}"
+    },
+    "primary": {
+      "$value": "{palette.brand.400}"
+    },
+    "primary-foreground": {
+      "$value": "{palette.brand.950}"
+    },
+    "secondary": {
+      "$value": "{palette.neutral.800}"
+    },
+    "secondary-foreground": {
+      "$value": "{palette.neutral.50}"
+    },
+    "muted": {
+      "$value": "{palette.neutral.800}"
+    },
+    "muted-foreground": {
+      "$value": "{palette.neutral.300}"
+    },
+    "accent": {
+      "$value": "{palette.brand.900}"
+    },
+    "accent-foreground": {
+      "$value": "{palette.brand.100}"
+    },
+    "destructive": {
+      "$value": "{palette.red.500}"
+    },
+    "destructive-foreground": {
+      "$value": "{palette.red.950}"
+    },
+    "success": {
+      "$value": "{palette.green.500}"
+    },
+    "success-foreground": {
+      "$value": "{palette.green.950}"
+    },
+    "warning": {
+      "$value": "{palette.amber.400}"
+    },
+    "warning-foreground": {
+      "$value": "{palette.amber.950}"
+    },
+    "info": {
+      "$value": "{palette.blue.400}"
+    },
+    "info-foreground": {
+      "$value": "{palette.blue.950}"
+    },
+    "border": {
+      "$value": "{palette.neutral.800}"
+    },
+    "input": {
+      "$value": "{palette.neutral.700}"
+    },
+    "ring": {
+      "$value": "{palette.brand.400}"
+    },
+    "chart-1": {
+      "$value": "{palette.brand.400}"
+    },
+    "chart-2": {
+      "$value": "{palette.green.400}"
+    },
+    "chart-3": {
+      "$value": "{palette.amber.400}"
+    },
+    "chart-4": {
+      "$value": "{palette.blue.400}"
+    },
+    "chart-5": {
+      "$value": "{palette.red.400}"
+    }
+  }
+}

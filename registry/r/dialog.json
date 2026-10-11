@@ -1,0 +1,22 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "dialog",
+  "type": "registry:ui",
+  "title": "Dialog",
+  "description": "Modal dialog with focus trap, overlay and animations.",
+  "dependencies": [
+    "lucide-react",
+    "radix-ui"
+  ],
+  "registryDependencies": [
+    "utils",
+    "https://nova.example.com/r/nova-focus.json"
+  ],
+  "files": [
+    {
+      "path": "components/ui/dialog.tsx",
+      "type": "registry:ui",
+      "content": "import { XIcon } from \"lucide-react\";\nimport { Dialog as DialogPrimitive } from \"radix-ui\";\nimport type * as React from \"react\";\nimport { cn } from \"@/lib/utils\";\nimport { focusRing } from \"@/lib/focus\";\n\nexport const Dialog = DialogPrimitive.Root;\nexport const DialogTrigger = DialogPrimitive.Trigger;\nexport const DialogClose = DialogPrimitive.Close;\nexport const DialogPortal = DialogPrimitive.Portal;\n\nexport function DialogOverlay({ className, ...props }: React.ComponentProps<typeof DialogPrimitive.Overlay>) {\n  return (\n    <DialogPrimitive.Overlay\n      data-slot=\"dialog-overlay\"\n      className={cn(\n        \"fixed inset-0 z-50 bg-black/50 backdrop-blur-[2px] data-[state=open]:animate-fade-in data-[state=closed]:animate-fade-out\",\n        className,\n      )}\n      {...props}\n    />\n  );\n}\n\nexport interface DialogContentProps extends React.ComponentProps<typeof DialogPrimitive.Content> {\n  /** Hide the built-in close (×) button. */\n  hideClose?: boolean;\n  /** Accessible label for the close button (localise it, e.g. \"ปิด\"). */\n  closeLabel?: string;\n}\n\nexport function DialogContent({ className, children, hideClose = false, closeLabel = \"Close\", ...props }: DialogContentProps) {\n  return (\n    <DialogPortal>\n      <DialogOverlay />\n      <DialogPrimitive.Content\n        data-slot=\"dialog-content\"\n        className={cn(\n          \"fixed top-1/2 left-1/2 z-50 grid w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl border bg-popover p-6 text-popover-foreground shadow-xl\",\n          \"data-[state=open]:animate-scale-in data-[state=closed]:animate-scale-out outline-none\",\n          className,\n        )}\n        {...props}\n      >\n        {children}\n        {!hideClose && (\n          <DialogPrimitive.Close\n            className={cn(\n              \"absolute top-4 right-4 cursor-pointer rounded-sm p-1 text-muted-foreground opacity-80 transition-opacity hover:opacity-100 [&_svg]:size-4\",\n              focusRing,\n            )}\n          >\n            <XIcon aria-hidden />\n            <span className=\"sr-only\">{closeLabel}</span>\n          </DialogPrimitive.Close>\n        )}\n      </DialogPrimitive.Content>\n    </DialogPortal>\n  );\n}\n\nexport function DialogHeader({ className, ...props }: React.ComponentProps<\"div\">) {\n  return <div data-slot=\"dialog-header\" className={cn(\"flex flex-col gap-1.5 pr-6 text-left\", className)} {...props} />;\n}\n\nexport function DialogFooter({ className, ...props }: React.ComponentProps<\"div\">) {\n  return (\n    <div\n      data-slot=\"dialog-footer\"\n      className={cn(\"flex flex-col-reverse gap-2 sm:flex-row sm:justify-end\", className)}\n      {...props}\n    />\n  );\n}\n\nexport function DialogTitle({ className, ...props }: React.ComponentProps<typeof DialogPrimitive.Title>) {\n  return (\n    <DialogPrimitive.Title\n      data-slot=\"dialog-title\"\n      className={cn(\"text-lg font-semibold leading-snug\", className)}\n      {...props}\n    />\n  );\n}\n\nexport function DialogDescription({ className, ...props }: React.ComponentProps<typeof DialogPrimitive.Description>) {\n  return (\n    <DialogPrimitive.Description\n      data-slot=\"dialog-description\"\n      className={cn(\"text-sm text-muted-foreground\", className)}\n      {...props}\n    />\n  );\n}\n"
+    }
+  ]
+}

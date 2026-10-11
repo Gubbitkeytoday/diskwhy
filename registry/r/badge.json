@@ -1,0 +1,22 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "badge",
+  "type": "registry:ui",
+  "title": "Badge",
+  "description": "Status / count label with semantic variants.",
+  "dependencies": [
+    "class-variance-authority",
+    "radix-ui"
+  ],
+  "registryDependencies": [
+    "utils",
+    "https://nova.example.com/r/nova-focus.json"
+  ],
+  "files": [
+    {
+      "path": "components/ui/badge.tsx",
+      "type": "registry:ui",
+      "content": "import { cva, type VariantProps } from \"class-variance-authority\";\nimport { Slot } from \"radix-ui\";\nimport type * as React from \"react\";\nimport { cn } from \"@/lib/utils\";\nimport { focusRing } from \"@/lib/focus\";\n\nexport const badgeVariants = cva(\n  [\n    \"inline-flex w-fit shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-medium\",\n    \"[&>svg]:pointer-events-none [&>svg]:size-3\",\n    focusRing,\n  ],\n  {\n    variants: {\n      variant: {\n        default: \"border-transparent bg-primary text-primary-foreground\",\n        secondary: \"border-transparent bg-secondary text-secondary-foreground\",\n        outline: \"text-foreground\",\n        destructive: \"border-transparent bg-destructive text-destructive-foreground\",\n        success: \"border-transparent bg-success text-success-foreground\",\n        warning: \"border-transparent bg-warning text-warning-foreground\",\n        info: \"border-transparent bg-info text-info-foreground\",\n      },\n    },\n    defaultVariants: { variant: \"default\" },\n  },\n);\n\nexport interface BadgeProps extends React.ComponentProps<\"span\">, VariantProps<typeof badgeVariants> {\n  asChild?: boolean;\n}\n\nexport function Badge({ className, variant, asChild = false, ...props }: BadgeProps) {\n  const Comp = asChild ? Slot.Root : \"span\";\n  return <Comp data-slot=\"badge\" className={cn(badgeVariants({ variant }), className)} {...props} />;\n}\n"
+    }
+  ]
+}
