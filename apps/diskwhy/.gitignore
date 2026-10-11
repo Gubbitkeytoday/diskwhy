@@ -1,0 +1,2 @@
+# Built by `pnpm cli:build` (scripts/build-cli.mjs) and bundled into the installer.
+/src-tauri/binaries/

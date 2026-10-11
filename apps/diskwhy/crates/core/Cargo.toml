@@ -1,0 +1,19 @@
+[package]
+name = "diskwhy-core"
+description = "DiskWhy core: parallel scanner, space-hog/unused-data analysis, safety guards and Windows cleanup actions"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+rayon = "1.12"
+sysinfo = { version = "0.39", default-features = false, features = ["disk"] }
+trash = "5.2"
+
+[target.'cfg(windows)'.dependencies]
+winreg = "0.55"
+
+[dev-dependencies]
+tempfile = "3"
+serde_json = "1"

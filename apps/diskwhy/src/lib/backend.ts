@@ -1,11 +1,10 @@
 // The only data source is the Rust backend running inside the DiskWhy desktop app (Tauri).
 // There is deliberately no mock/demo implementation: every number on screen comes from this machine.
 import type {
-  AiKeyStatus,
-  AiProgress,
-  AiResult,
   DoneEvent,
   DriveInfo,
+  McpInfo,
+  McpTarget,
   NodeView,
   ProgressEvent,
   Report,
@@ -27,12 +26,12 @@ export interface Backend {
   /** Opens a built-in Windows tool (Storage Sense, Disk Cleanup, Apps & features, Recycle Bin). */
   openSystemTool(tool: SystemTool): Promise<void>;
 
-  aiKeyStatus(): Promise<AiKeyStatus>;
-  /** Validates the format and stores the key in Windows Credential Manager (never in the WebView). */
-  aiSetKey(key: string): Promise<AiKeyStatus>;
-  aiClearKey(): Promise<AiKeyStatus>;
-  /** Haiku 5.5 classifies candidates, Sonnet 5.5 writes the cleanup plan. Progress via onProgress. */
-  aiAnalyze(options: { anonymize: boolean }, onProgress: (p: AiProgress) => void): Promise<AiResult>;
+  /** What is installed (Claude Code / Claude Desktop / bundled CLI) and what is already registered. Read-only. */
+  mcpInfo(): Promise<McpInfo>;
+  /** Registers DiskWhy's MCP server with that Claude app. Only call from an explicit user action. */
+  mcpRegister(target: McpTarget): Promise<McpInfo>;
+  /** Removes the registration again. Only call from an explicit user action. */
+  mcpUnregister(target: McpTarget): Promise<McpInfo>;
 }
 
 export const isNative = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
@@ -85,17 +84,9 @@ async function createNative(): Promise<Backend> {
     moveToTrash: (t) => invoke<number>("move_to_trash", { path: t.path, dirIds: t.dirIds, fileName: t.fileName ?? null }),
     openSystemTool: (tool) => invoke("open_system_tool", { tool }),
 
-    aiKeyStatus: () => invoke<AiKeyStatus>("ai_key_status"),
-    aiSetKey: (key) => invoke<AiKeyStatus>("ai_set_key", { key }),
-    aiClearKey: () => invoke<AiKeyStatus>("ai_clear_key"),
-    async aiAnalyze(options, onProgress) {
-      const unlisten = await listen<AiProgress>("ai-progress", (e) => onProgress(e.payload));
-      try {
-        return await invoke<AiResult>("ai_analyze", { anonymize: options.anonymize });
-      } finally {
-        unlisten();
-      }
-    },
+    mcpInfo: () => invoke<McpInfo>("mcp_info"),
+    mcpRegister: (target) => invoke<McpInfo>("mcp_register", { target }),
+    mcpUnregister: (target) => invoke<McpInfo>("mcp_unregister", { target }),
   };
 }
 

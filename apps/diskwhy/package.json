@@ -1,7 +1,7 @@
 {
   "name": "@nova/diskwhy",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "DiskWhy — ดิสก์เต็มเพราะอะไร: desktop disk-space analyzer (Tauri 2 + Rust + React)",
   "type": "module",
   "scripts": {
@@ -10,6 +10,7 @@
     "tauri": "tauri",
     "app:dev": "tauri dev",
     "app:build": "tauri build",
+    "cli:build": "node scripts/build-cli.mjs",
     "test": "vitest run",
     "typecheck": "tsc --noEmit -p ."
   },

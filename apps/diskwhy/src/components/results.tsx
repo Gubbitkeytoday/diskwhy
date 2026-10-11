@@ -21,13 +21,11 @@ import {
   TabsTrigger,
   toast,
 } from "@nova/ui";
-import { ArrowLeftIcon, ChevronRightIcon, CloudIcon, FolderIcon, MapIcon, RotateCwIcon, ShieldAlertIcon, SparklesIcon, Trash2Icon } from "lucide-react";
+import { ArrowLeftIcon, ChevronRightIcon, CloudIcon, FolderIcon, MapIcon, RotateCwIcon, ShieldAlertIcon, Trash2Icon } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import type { TrashRequest } from "../lib/ai-logic";
 import type { Backend } from "../lib/backend";
 import { CATEGORY_META, formatAge, formatBytes, formatDuration, formatNumber, percent } from "../lib/format";
-import type { ChildView, Location, NodeView, Report, TopFile } from "../lib/types";
-import { AiPanel, useAiAdvisor } from "./ai-panel";
+import type { ChildView, Location, NodeView, Report, TopFile, TrashRequest } from "../lib/types";
 import { CategoryBreakdown, HogList, Verdict } from "./insights";
 import { UsageBar } from "./screens";
 import { SizeList } from "./size-list";
@@ -54,8 +52,6 @@ export function ResultsScreen({
   const [selected, setSelected] = useState<string | null>(null);
   const [pending, setPending] = useState<PendingTrash | null>(null);
   const [busy, setBusy] = useState(false);
-  // Lifted here so the AI result, progress and "moved" marks survive switching tabs.
-  const advisor = useAiAdvisor(backend);
 
   const load = useCallback(
     async (next: number[]) => {
@@ -114,7 +110,6 @@ export function ResultsScreen({
       const freed = await backend.moveToTrash(pending);
       toast.success(`ย้าย "${pending.name}" ไปถังขยะแล้ว`, { description: `คืนพื้นที่ ${formatBytes(freed)} (กู้คืนได้จาก Recycle Bin)` });
       setPending(null);
-      advisor.applyRemoval(pending); // marks AI rows as moved and re-indexes the others (directory indices shift)
       onReportChange();
       // Indices may shift after removal: reload the parent of what was removed.
       const parent = pending.fileName ? pending.dirIds : pending.dirIds.slice(0, -1);
@@ -183,9 +178,6 @@ export function ResultsScreen({
           <TabsTrigger value="why">ทำไมเต็ม</TabsTrigger>
           <TabsTrigger value="explore">สำรวจ (แผนผัง)</TabsTrigger>
           <TabsTrigger value="files">ไฟล์ใหญ่สุด</TabsTrigger>
-          <TabsTrigger value="ai">
-            <SparklesIcon aria-hidden /> ผู้ช่วย AI
-          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="why" className="grid gap-5 lg:grid-cols-[1fr_22rem]">
@@ -298,10 +290,6 @@ export function ResultsScreen({
               </TableBody>
             </Table>
           </Card>
-        </TabsContent>
-
-        <TabsContent value="ai">
-          <AiPanel backend={backend} report={report} advisor={advisor} onTrash={setPending} onReveal={reveal} onShowLocation={showIds} />
         </TabsContent>
       </Tabs>
 

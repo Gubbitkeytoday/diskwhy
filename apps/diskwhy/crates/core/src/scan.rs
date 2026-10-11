@@ -130,12 +130,41 @@ pub struct ScanCtx<'a> {
     pub cancel: &'a AtomicBool,
     /// extension → (bytes, count)
     pub extensions: Mutex<HashMap<Box<str>, (u64, u64)>>,
+    /// Lower-cased directory to skip because its contents are already visible elsewhere (see [`package_local_cache`]).
+    pub skip_dir: Option<String>,
 }
 
 impl<'a> ScanCtx<'a> {
     pub fn new(progress: &'a Progress, cancel: &'a AtomicBool) -> Self {
-        Self { progress, cancel, extensions: Mutex::new(HashMap::new()) }
+        Self { progress, cancel, extensions: Mutex::new(HashMap::new()), skip_dir: package_local_cache() }
     }
+}
+
+/// When this process runs inside an MSIX package (e.g. launched as an MCP server by the Microsoft Store build of
+/// Claude Desktop), Windows merges the package's `…\Packages\<family>\LocalCache` into the normal AppData paths.
+/// The same files are then reachable twice, so the LocalCache copy must be skipped to avoid double counting.
+/// Returns None for normal (unpackaged) processes — there LocalCache is real, unique data and is scanned.
+#[cfg(windows)]
+pub fn package_local_cache() -> Option<String> {
+    #[link(name = "kernel32")]
+    unsafe extern "system" {
+        fn GetCurrentPackageFamilyName(len: *mut u32, name: *mut u16) -> i32;
+    }
+    let mut len: u32 = 256;
+    let mut buf = vec![0u16; len as usize];
+    // SAFETY: buf has `len` u16 slots; the API writes at most `len` chars (incl. NUL) and updates len.
+    let rc = unsafe { GetCurrentPackageFamilyName(&mut len, buf.as_mut_ptr()) };
+    if rc != 0 || len == 0 {
+        return None; // APPMODEL_ERROR_NO_PACKAGE (15700) for unpackaged processes
+    }
+    let family = String::from_utf16_lossy(&buf[..(len as usize).saturating_sub(1)]);
+    let local = std::env::var("LOCALAPPDATA").ok()?;
+    Some(format!("{local}\\Packages\\{family}\\LocalCache").to_lowercase())
+}
+
+#[cfg(not(windows))]
+pub fn package_local_cache() -> Option<String> {
+    None
 }
 
 #[cfg(windows)]
@@ -185,6 +214,13 @@ pub fn scan_dir(path: &Path, name: Box<str>, ctx: &ScanCtx) -> DirNode {
             continue; // symlinks + junctions: skip (Rust reports Windows mount points as symlinks)
         }
         if ft.is_dir() {
+            // Cheap name check first; the full-path comparison only runs for folders literally named LocalCache.
+            if let Some(skip) = &ctx.skip_dir
+                && entry.file_name().eq_ignore_ascii_case("LocalCache")
+                && entry.path().to_string_lossy().to_lowercase() == *skip
+            {
+                continue;
+            }
             subdirs.push(entry);
             continue;
         }
@@ -317,6 +353,20 @@ mod tests {
         let ext = ctx.extensions.lock().unwrap();
         assert_eq!(ext.get("mp4"), Some(&(3 * 1024 * 1024, 1)));
         assert_eq!(ext.get("keep"), None, "dot-files have no extension");
+    }
+
+    #[test]
+    fn skips_merged_package_local_cache() {
+        let dir = tempfile::tempdir().unwrap();
+        write(&dir.path().join("Packages/Claude_x/LocalCache/Roaming/a.bin"), 2 * 1024 * 1024);
+        write(&dir.path().join("Packages/Claude_x/Settings/s.dat"), 10);
+        write(&dir.path().join("Packages/Other/LocalCache/b.bin"), 1000);
+        let (p, c) = (Progress::default(), AtomicBool::new(false));
+        let mut ctx = ScanCtx::new(&p, &c);
+        let skip = dir.path().join("Packages").join("Claude_x").join("LocalCache");
+        ctx.skip_dir = Some(skip.to_string_lossy().replace('/', "\\").to_lowercase());
+        let root = scan_dir(dir.path(), "root".into(), &ctx);
+        assert_eq!(root.size, 10 + 1000, "only the merged LocalCache of the current package is skipped");
     }
 
     #[test]

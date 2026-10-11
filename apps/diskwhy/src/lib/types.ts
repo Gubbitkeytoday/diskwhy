@@ -1,4 +1,4 @@
-// Mirrors the serde shapes in src-tauri/src/{lib,insights}.rs. Keep both sides in sync.
+// Mirrors the serde shapes in src-tauri/src/{lib,mcp_setup}.rs and crates/core. Keep both sides in sync.
 
 export interface DriveInfo {
   mount: string;
@@ -133,77 +133,32 @@ export interface TrashTarget {
   fileName?: string;
 }
 
-/* ── AI advisor (src-tauri/src/ai.rs, serde rename_all = "camelCase") ───── */
-
-export interface AiKeyStatus {
-  configured: boolean;
-  /** Where the key comes from. "keychain" = Windows Credential Manager, "env" = ANTHROPIC_API_KEY. */
-  source: "keychain" | "env" | "none";
-}
-
-export interface AiProgress {
-  stage: "prepare" | "classify" | "plan" | "done";
-  done: number;
-  total: number;
-  message: string;
-}
-
-export type AiVerdict = "delete" | "review" | "keep" | "system_tool";
-export type AiAction = "recycle_bin" | "uninstall_app" | "run_command" | "move_to_other_drive" | "compress" | "leave";
-
-export interface AiItem {
-  id: number;
-  path: string;
+/** A trash request as the results screen understands it: the backend target plus what the confirm dialog shows. */
+export interface TrashRequest extends TrashTarget {
+  name: string;
   size: number;
-  kind: "dir" | "file";
-  /** Index path of the dir (kind=dir) or of the containing dir (kind=file); null if not in the tree. */
-  dirIds: number[] | null;
-  fileName: string | null;
-  verdict: AiVerdict;
-  confidence: "high" | "medium" | "low";
-  reason: string;
-  action: AiAction;
-  command: string;
 }
 
-export interface AiCommand {
-  label: string;
-  command: string;
-  shell: "powershell" | "cmd" | "settings";
-  /** Needs an elevated (administrator) prompt. */
-  admin: boolean;
-}
+/* ── Claude (MCP) connection (src-tauri/src/mcp_setup.rs, serde rename_all = "camelCase") ───── */
 
-export interface AiStep {
-  title: string;
-  detail: string;
-  risk: "low" | "medium" | "high";
-  estBytes: number;
-  itemIds: number[];
-  commands: AiCommand[];
-}
+export type McpTarget = "claude-code" | "claude-desktop";
 
-export interface AiPlan {
-  headline: string;
-  diagnosis: string;
-  reclaimSafeBytes: number;
-  steps: AiStep[];
-  warnings: string[];
-  keep: string[];
-}
-
-export interface AiUsage {
-  inputTokens: number;
-  outputTokens: number;
-  costUsd: number;
-  models: string[];
-}
-
-export interface AiResult {
-  items: AiItem[];
-  plan: AiPlan;
-  usage: AiUsage;
-  anonymized: boolean;
+export interface McpInfo {
+  /** Absolute path of the bundled diskwhy-cli.exe; null when it cannot be found (dev build without `pnpm cli:build`). */
+  cliPath: string | null;
+  cliFound: boolean;
+  /** claude.exe / claude.cmd of Claude Code; null = not installed. */
+  claudeCodePath: string | null;
+  claudeCodeRegistered: boolean;
+  /** Config file Claude Desktop reads; null = Claude Desktop not found. */
+  claudeDesktopConfigPath: string | null;
+  claudeDesktopRegistered: boolean;
+  /** Command to paste in a terminal to register DiskWhy with Claude Code by hand. */
+  claudeCodeCommand: string;
+  /** JSON to merge into claude_desktop_config.json by hand. */
+  desktopSnippet: string;
+  /** Thai message after register/unregister (for example "restart Claude Desktop"); null from `mcpInfo`. */
+  note: string | null;
 }
 
 export type SystemTool = "storage-sense" | "disk-cleanup" | "apps-features" | "recycle-bin";

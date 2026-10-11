@@ -1,52 +1,22 @@
-mod ai;
-mod insights;
-mod installed;
-mod scan;
+mod mcp_setup;
 
-use insights::{CategoryStat, ExtStat, Hog, NodeView, TopFile};
-use scan::{DirNode, Progress, ScanCtx};
+use diskwhy_core::insights::{self, NodeView};
+use diskwhy_core::report::{self, DriveInfo, Report, ScanResult, ScanStats};
+use diskwhy_core::scan::{self, Progress};
+use diskwhy_core::{actions, safety};
+use mcp_setup::{Env, McpInfo, McpTarget};
 use serde::Serialize;
-use std::collections::HashMap;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering::Relaxed};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use tauri::{AppHandle, Emitter, Manager, State};
-
-struct ScanResult {
-    root_path: PathBuf,
-    root: DirNode,
-    extensions: HashMap<Box<str>, (u64, u64)>,
-    stats: ScanStats,
-}
 
 #[derive(Default)]
 struct AppState {
     result: Mutex<Option<ScanResult>>,
     cancel: Mutex<Option<Arc<AtomicBool>>>,
     seq: AtomicU64,
-}
-
-#[derive(Serialize, Clone, Debug)]
-#[serde(rename_all = "camelCase")]
-struct DriveInfo {
-    mount: String,
-    name: String,
-    file_system: String,
-    total: u64,
-    available: u64,
-    removable: bool,
-}
-
-#[derive(Serialize, Clone, Debug, Default)]
-#[serde(rename_all = "camelCase")]
-struct ScanStats {
-    files: u64,
-    dirs: u64,
-    bytes: u64,
-    errors: u64,
-    cloud_bytes: u64,
-    elapsed_ms: u64,
 }
 
 #[derive(Serialize, Clone)]
@@ -69,42 +39,9 @@ struct DoneEvent {
     stats: ScanStats,
 }
 
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct Report {
-    root_path: String,
-    total: u64,
-    stats: ScanStats,
-    categories: Vec<CategoryStat>,
-    extensions: Vec<ExtStat>,
-    hogs: Vec<Hog>,
-    top_files: Vec<TopFile>,
-    drive: Option<DriveInfo>,
-}
-
-fn drives() -> Vec<DriveInfo> {
-    let disks = sysinfo::Disks::new_with_refreshed_list();
-    let mut out: Vec<DriveInfo> = disks
-        .list()
-        .iter()
-        .map(|d| DriveInfo {
-            mount: d.mount_point().to_string_lossy().to_string(),
-            name: d.name().to_string_lossy().to_string(),
-            file_system: d.file_system().to_string_lossy().to_string(),
-            total: d.total_space(),
-            available: d.available_space(),
-            removable: d.is_removable(),
-        })
-        .filter(|d| d.total > 0)
-        .collect();
-    out.sort_by(|a, b| a.mount.cmp(&b.mount));
-    out.dedup_by(|a, b| a.mount == b.mount);
-    out
-}
-
 #[tauri::command]
 fn list_drives() -> Vec<DriveInfo> {
-    drives()
+    report::drives()
 }
 
 /// Start a scan in the background. Progress arrives as `scan-progress` events, completion as `scan-done`.
@@ -152,24 +89,16 @@ fn start_scan(path: String, app: AppHandle, state: State<'_, AppState>) -> Resul
                 })
             };
 
-            let ctx = ScanCtx::new(&progress, &cancel);
-            let root = scan::scan_dir(&root_path, root_path.to_string_lossy().into(), &ctx);
+            let result = report::run_scan(&root_path, &progress, &cancel);
             finished.store(true, Relaxed);
             let _ = ticker.join();
 
-            let cancelled = cancel.load(Relaxed);
-            let stats = ScanStats {
-                files: root.files,
-                dirs: root.dirs,
-                bytes: root.size,
-                errors: progress.errors.load(Relaxed),
-                cloud_bytes: progress.cloud_bytes.load(Relaxed),
-                elapsed_ms: started.elapsed().as_millis() as u64,
-            };
-            let state = app.state::<AppState>();
-            if !cancelled && let Ok(mut slot) = state.result.lock() {
-                let extensions = ctx.extensions.into_inner().unwrap_or_default();
-                *slot = Some(ScanResult { root_path, root, extensions, stats: stats.clone() });
+            let cancelled = result.is_none();
+            let stats = result.as_ref().map(|r| r.stats.clone()).unwrap_or_default();
+            if let Some(r) = result
+                && let Ok(mut slot) = app.state::<AppState>().result.lock()
+            {
+                *slot = Some(r);
             }
             let _ = app.emit("scan-done", DoneEvent { scan_id, cancelled, stats });
         })
@@ -190,22 +119,7 @@ fn cancel_scan(state: State<'_, AppState>) {
 fn get_report(state: State<'_, AppState>) -> Result<Report, String> {
     let guard = state.result.lock().map_err(|e| e.to_string())?;
     let r = guard.as_ref().ok_or("ยังไม่มีผลการสแกน")?;
-    let (categories, extensions) = insights::categories(&r.extensions);
-    let root_str = r.root_path.to_string_lossy().to_string();
-    let drive = drives()
-        .into_iter()
-        .filter(|d| root_str.to_lowercase().starts_with(&d.mount.to_lowercase()))
-        .max_by_key(|d| d.mount.len());
-    Ok(Report {
-        root_path: root_str,
-        total: r.root.size,
-        stats: ScanStats { bytes: r.root.size, files: r.root.files, dirs: r.root.dirs, ..r.stats.clone() },
-        categories,
-        extensions,
-        hogs: insights::find_hogs(&r.root, &r.root_path),
-        top_files: insights::top_files(&r.root, &r.root_path, 200),
-        drive,
-    })
+    Ok(report::build_report(r, 200))
 }
 
 #[tauri::command]
@@ -215,35 +129,22 @@ fn get_node(ids: Vec<u32>, state: State<'_, AppState>) -> Result<NodeView, Strin
     insights::node_view(&r.root, &r.root_path, &ids, 300).ok_or_else(|| "ไม่พบโฟลเดอร์นี้ในผลสแกน".into())
 }
 
-/// Paths the app refuses to touch, even via the Recycle Bin.
-fn is_protected(path: &Path) -> bool {
-    let p = path.to_string_lossy().to_lowercase().replace('/', "\\");
-    let p = p.trim_end_matches('\\');
-    let protected_prefixes = ["c:\\windows", "c:\\program files", "c:\\program files (x86)", "c:\\programdata\\microsoft"];
-    let protected_names = ["hiberfil.sys", "pagefile.sys", "swapfile.sys", "$recycle.bin", "system volume information", "winsxs"];
-    let name = p.rsplit('\\').next().unwrap_or_default();
-    p.len() <= 3 // drive roots like "c:"
-        || protected_prefixes.iter().any(|pre| p == *pre || p.starts_with(&format!("{pre}\\")))
-        || protected_names.contains(&name)
-        || p.matches('\\').count() <= 1 && p.starts_with("c:") // top-level folders on the system drive (C:\Users …)
-}
-
 /// Move a file/folder to the Recycle Bin (recoverable), then update the in-memory tree.
 #[tauri::command]
 fn move_to_trash(path: String, dir_ids: Vec<u32>, file_name: Option<String>, state: State<'_, AppState>) -> Result<u64, String> {
     let target = PathBuf::from(&path);
-    if is_protected(&target) {
-        return Err("ตำแหน่งนี้เป็นไฟล์/โฟลเดอร์ของระบบ — แอปไม่อนุญาตให้ลบเพื่อความปลอดภัย".into());
+    if safety::is_protected(&target) {
+        return Err(safety::PROTECTED_MESSAGE.into());
     }
     let mut guard = state.result.lock().map_err(|e| e.to_string())?;
     // The index path must still point at exactly this file/folder; indices shift after earlier removals,
     // and a stale index must never update (or count) the wrong node.
     if let Some(r) = guard.as_ref()
-        && !tree_path_matches(&r.root_path, &r.root, &dir_ids, file_name.as_deref(), &path)
+        && !safety::tree_path_matches(&r.root_path, &r.root, &dir_ids, file_name.as_deref(), &path)
     {
         return Err("ผลสแกนเปลี่ยนไปแล้ว (มีการลบรายการอื่นก่อนหน้า) — กรุณาเปิดตำแหน่งนี้ใหม่หรือสแกนอีกครั้ง".into());
     }
-    trash::delete(&target).map_err(|e| format!("ย้ายไปถังขยะไม่สำเร็จ: {e}"))?;
+    safety::recycle(&target)?;
     let freed = guard
         .as_mut()
         .and_then(|r| scan::remove_from_tree(&mut r.root, &dir_ids, file_name.as_deref()))
@@ -251,25 +152,52 @@ fn move_to_trash(path: String, dir_ids: Vec<u32>, file_name: Option<String>, sta
     Ok(freed)
 }
 
-/// Does `dir_ids` (+ optional file name) resolve to `target` in the scanned tree? Case-insensitive, separator-agnostic.
-fn tree_path_matches(root_path: &Path, root: &DirNode, dir_ids: &[u32], file_name: Option<&str>, target: &str) -> bool {
-    let norm = |s: &str| s.replace('/', "\\").trim_end_matches('\\').to_lowercase();
-    let mut built = norm(&root_path.to_string_lossy());
-    let mut node = root;
-    for &i in dir_ids {
-        let Some(child) = node.children.get(i as usize) else { return false };
-        built.push('\\');
-        built.push_str(&child.name.to_lowercase());
-        node = child;
-    }
-    if let Some(f) = file_name {
-        if !node.big_files.iter().any(|x| &*x.name == f) {
-            return false;
-        }
-        built.push('\\');
-        built.push_str(&f.to_lowercase());
-    }
-    built == norm(target)
+#[tauri::command]
+fn open_system_tool(tool: String) -> Result<(), String> {
+    actions::open_system_tool(&tool)
+}
+
+/// Where the bundled `diskwhy-cli.exe` is: the installer's resource folder, else beside the running exe, else nowhere.
+fn cli_location(app: &AppHandle) -> Option<PathBuf> {
+    let resources = app.path().resource_dir().ok();
+    let exe_dir = std::env::current_exe().ok().and_then(|e| e.parent().map(PathBuf::from));
+    mcp_setup::locate_cli(resources.as_deref(), exe_dir.as_deref())
+}
+
+/// Runs blocking process/file work off the UI thread.
+async fn blocking<T: Send + 'static>(f: impl FnOnce() -> Result<T, String> + Send + 'static) -> Result<T, String> {
+    tauri::async_runtime::spawn_blocking(f).await.map_err(|e| e.to_string())?
+}
+
+/// What is installed and what is registered. Read-only.
+#[tauri::command]
+async fn mcp_info(app: AppHandle) -> Result<McpInfo, String> {
+    let cli = cli_location(&app);
+    blocking(move || Ok(mcp_setup::collect_info(cli.as_deref(), &Env::from_process()))).await
+}
+
+/// Registers DiskWhy's MCP server with Claude Code or Claude Desktop. Only ever called from an explicit button click.
+#[tauri::command]
+async fn mcp_register(target: McpTarget, app: AppHandle) -> Result<McpInfo, String> {
+    let cli = cli_location(&app);
+    blocking(move || {
+        let env = Env::from_process();
+        let note = mcp_setup::register(target, cli.as_deref(), &env)?;
+        Ok(McpInfo { note: Some(note), ..mcp_setup::collect_info(cli.as_deref(), &env) })
+    })
+    .await
+}
+
+/// Removes the registration again. Only ever called from an explicit button click.
+#[tauri::command]
+async fn mcp_unregister(target: McpTarget, app: AppHandle) -> Result<McpInfo, String> {
+    let cli = cli_location(&app);
+    blocking(move || {
+        let env = Env::from_process();
+        let note = mcp_setup::unregister(target, &env)?;
+        Ok(McpInfo { note: Some(note), ..mcp_setup::collect_info(cli.as_deref(), &env) })
+    })
+    .await
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -285,48 +213,11 @@ pub fn run() {
             get_report,
             get_node,
             move_to_trash,
-            ai::ai_key_status,
-            ai::ai_set_key,
-            ai::ai_clear_key,
-            ai::ai_analyze,
-            ai::open_system_tool
+            open_system_tool,
+            mcp_info,
+            mcp_register,
+            mcp_unregister
         ])
         .run(tauri::generate_context!())
         .expect("error while running DiskWhy");
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn protects_system_locations() {
-        for p in ["C:\\", "C:\\Windows", "c:\\windows\\System32\\x.dll", "C:\\Program Files\\App", "C:\\Users", "D:\\", "C:\\pagefile.sys", "E:\\$Recycle.Bin"] {
-            assert!(is_protected(Path::new(p)), "{p} should be protected");
-        }
-        for p in ["C:\\Users\\somchai\\Downloads\\setup.exe", "D:\\Videos\\old.mkv", "C:\\Users\\a\\code\\app\\node_modules"] {
-            assert!(!is_protected(Path::new(p)), "{p} should be allowed");
-        }
-    }
-
-    #[test]
-    fn trash_target_must_match_tree_node() {
-        use scan::FileEntry;
-        let leaf = DirNode { name: "node_modules".into(), ..Default::default() };
-        let app = DirNode { name: "app".into(), children: vec![leaf], ..Default::default() };
-        let mut root = DirNode { name: "C:\\".into(), children: vec![app], ..Default::default() };
-        root.children[0].big_files = vec![FileEntry { name: "setup.exe".into(), size: 5, modified: 0 }];
-        let rp = Path::new("C:\\Users\\a\\");
-        assert!(tree_path_matches(rp, &root, &[0, 0], None, "c:/users/A/app/node_modules/"));
-        assert!(tree_path_matches(rp, &root, &[0], Some("setup.exe"), "C:\\Users\\a\\app\\setup.exe"));
-        // Stale or wrong indices are rejected.
-        assert!(!tree_path_matches(rp, &root, &[0], None, "C:\\Users\\a\\app\\node_modules"));
-        assert!(!tree_path_matches(rp, &root, &[1], None, "C:\\Users\\a\\other"));
-        assert!(!tree_path_matches(rp, &root, &[0], Some("gone.exe"), "C:\\Users\\a\\app\\gone.exe"));
-    }
-
-    #[test]
-    fn lists_at_least_one_drive() {
-        assert!(!drives().is_empty());
-    }
 }

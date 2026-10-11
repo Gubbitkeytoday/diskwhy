@@ -1,6 +1,7 @@
-import { Button, toast, useTheme } from "@nova/ui";
-import { MoonIcon, ScanSearchIcon, SunIcon } from "lucide-react";
+import { Button, Sheet, SheetBody, SheetContent, SheetDescription, SheetHeader, SheetTitle, toast, useTheme } from "@nova/ui";
+import { MoonIcon, PlugIcon, ScanSearchIcon, SunIcon } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { McpPanel } from "./components/mcp-panel";
 import { ResultsScreen } from "./components/results";
 import { HomeScreen, NotInAppScreen, ScanningScreen, StartupErrorScreen } from "./components/screens";
 import { type Backend, getBackend } from "./lib/backend";
@@ -22,6 +23,7 @@ export function App() {
   const [view, setView] = useState<View>({ name: "home" });
   const [progress, setProgress] = useState<ProgressEvent | null>(null);
   const [report, setReport] = useState<Report | null>(null);
+  const [mcpOpen, setMcpOpen] = useState(false);
   const { resolvedTheme, setTheme } = useTheme();
 
   useEffect(() => {
@@ -82,8 +84,13 @@ export function App() {
         </span>
         <span className="font-semibold tracking-tight">DiskWhy</span>
         <span className="text-sm text-muted-foreground">· ดิสก์เต็มเพราะอะไร</span>
+        {backend && (
+          <Button className="ml-auto" size="sm" variant="outline" onClick={() => setMcpOpen(true)}>
+            <PlugIcon /> เชื่อมต่อกับ Claude
+          </Button>
+        )}
         <Button
-          className="ml-auto"
+          className={backend ? undefined : "ml-auto"}
           size="icon-sm"
           variant="ghost"
           aria-label={resolvedTheme === "dark" ? "เปลี่ยนเป็นธีมสว่าง" : "เปลี่ยนเป็นธีมมืด"}
@@ -116,6 +123,19 @@ export function App() {
           </>
         )}
       </main>
+      {backend && (
+        <Sheet open={mcpOpen} onOpenChange={setMcpOpen}>
+          <SheetContent closeLabel="ปิด" className="w-[min(44rem,calc(100%-3rem))]">
+            <SheetHeader>
+              <SheetTitle>เชื่อมต่อ Claude (MCP)</SheetTitle>
+              <SheetDescription>ให้ Claude ที่คุณใช้อยู่ช่วยตรวจและเคลียร์ดิสก์ผ่าน DiskWhy</SheetDescription>
+            </SheetHeader>
+            <SheetBody>
+              <McpPanel backend={backend} />
+            </SheetBody>
+          </SheetContent>
+        </Sheet>
+      )}
     </div>
   );
 }

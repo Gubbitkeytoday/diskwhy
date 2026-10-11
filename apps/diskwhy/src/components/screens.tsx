@@ -87,7 +87,7 @@ export function HomeScreen({
           <FolderSearchIcon /> เลือกโฟลเดอร์เอง…
         </Button>
         <p className="text-xs text-muted-foreground">
-          แอปอ่านข้อมูลอย่างเดียว ไม่ส่งข้อมูลออกนอกเครื่อง เว้นแต่คุณกดใช้ผู้ช่วย AI และลบไฟล์ได้เฉพาะเมื่อคุณยืนยัน (ย้ายไปถังขยะ กู้คืนได้)
+          แอปอ่านข้อมูลอย่างเดียว ไม่ส่งข้อมูลออกนอกเครื่อง และลบไฟล์ได้เฉพาะเมื่อคุณยืนยัน (ย้ายไปถังขยะ กู้คืนได้)
         </p>
       </div>
     </div>
@@ -169,7 +169,7 @@ export function NotInAppScreen() {
         DiskWhy อ่านข้อมูลจากคอมพิวเตอร์เครื่องนี้โดยตรง จึงทำงานได้เฉพาะในแอปเดสก์ท็อป หน้านี้จะไม่แสดงข้อมูลตัวอย่างใด ๆ
       </p>
       <p className="text-sm text-muted-foreground">
-        ติดตั้งด้วยไฟล์ <code className="font-mono text-foreground">DiskWhy_0.1.0_x64-setup.exe</code> แล้วเปิดแอป DiskWhy
+        ติดตั้งด้วยไฟล์ <code className="font-mono text-foreground">DiskWhy_0.2.0_x64-setup.exe</code> แล้วเปิดแอป DiskWhy
       </p>
     </StartupCard>
   );
