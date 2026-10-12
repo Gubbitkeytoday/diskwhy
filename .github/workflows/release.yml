@@ -1,0 +1,67 @@
+# Release DiskWhy: push a tag like `v0.3.0` (matching the version in apps/diskwhy/src-tauri/tauri.conf.json).
+# Builds the signed NSIS installer + updater artifacts and publishes a GitHub Release with latest.json,
+# which every installed copy checks on launch (tauri.conf.json > plugins.updater.endpoints).
+name: Release DiskWhy
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/diskwhy -> target
+
+      - name: Install JS dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build design system packages
+        run: |
+          pnpm --filter @nova/tokens build
+          pnpm --filter @nova/ui build
+
+      - name: Test (Rust workspace + frontend)
+        working-directory: apps/diskwhy
+        run: |
+          cargo test --workspace
+          pnpm typecheck
+          pnpm test
+
+      - name: Build, sign and publish release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          projectPath: apps/diskwhy
+          tauriScript: pnpm tauri
+          tagName: v__VERSION__
+          releaseName: DiskWhy v__VERSION__
+          releaseBody: |
+            ดาวน์โหลด `DiskWhy_*_x64-setup.exe` ด้านล่างเพื่อติดตั้ง — ผู้ที่ติดตั้งแล้วจะได้รับแจ้งอัปเดตอัตโนมัติเมื่อเปิดแอป
+            Download `DiskWhy_*_x64-setup.exe` below. Installed copies update automatically on next launch.
+          releaseDraft: false
+          prerelease: false
+          includeUpdaterJson: true

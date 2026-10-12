@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/diskwhy -> target
+      - run: pnpm install --frozen-lockfile
+      - name: Design system (tokens incl. WCAG contrast gate, UI components)
+        run: |
+          pnpm --filter @nova/tokens build
+          pnpm --filter @nova/ui build
+          pnpm --filter @nova/ui test
+      - name: DiskWhy
+        working-directory: apps/diskwhy
+        run: |
+          cargo test --workspace
+          pnpm typecheck
+          pnpm test
+          pnpm build
