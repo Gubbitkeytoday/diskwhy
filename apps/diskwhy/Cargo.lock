@@ -898,7 +898,7 @@ dependencies = [
 
 [[package]]
 name = "diskwhy"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "diskwhy-core",
  "serde",
@@ -913,7 +913,7 @@ dependencies = [
 
 [[package]]
 name = "diskwhy-cli"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "clap",
  "diskwhy-core",
@@ -927,7 +927,7 @@ dependencies = [
 
 [[package]]
 name = "diskwhy-core"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "rayon",
  "serde",

@@ -130,40 +130,98 @@ pub struct ScanCtx<'a> {
     pub cancel: &'a AtomicBool,
     /// extension → (bytes, count)
     pub extensions: Mutex<HashMap<Box<str>, (u64, u64)>>,
-    /// Lower-cased directory to skip because its contents are already visible elsewhere (see [`package_local_cache`]).
-    pub skip_dir: Option<String>,
+    /// Alias detection for MSIX-virtualized AppData (see [`AliasGuard`]).
+    pub aliases: AliasGuard,
 }
 
 impl<'a> ScanCtx<'a> {
     pub fn new(progress: &'a Progress, cancel: &'a AtomicBool) -> Self {
-        Self { progress, cancel, extensions: Mutex::new(HashMap::new()), skip_dir: package_local_cache() }
+        Self { progress, cancel, extensions: Mutex::new(HashMap::new()), aliases: AliasGuard::from_env() }
     }
 }
 
-/// When this process runs inside an MSIX package (e.g. launched as an MCP server by the Microsoft Store build of
-/// Claude Desktop), Windows merges the package's `…\Packages\<family>\LocalCache` into the normal AppData paths.
-/// The same files are then reachable twice, so the LocalCache copy must be skipped to avoid double counting.
-/// Returns None for normal (unpackaged) processes — there LocalCache is real, unique data and is scanned.
+/// Processes started by an MSIX-packaged app (e.g. an MCP server launched by the Microsoft Store build of Claude)
+/// can see `…\Packages\<family>\LocalCache\{Roaming,Local}\X` a second time as `%APPDATA%\X` / `%LOCALAPPDATA%\X`,
+/// even when they have no package identity of their own (GetCurrentPackageFamilyName returns 15700 there).
+/// Both names are the same folder on disk, so only the first one reached is counted.
+/// Only folders directly under those roots are checked: a few hundred metadata-only `CreateFile` calls per scan.
+#[derive(Default)]
+pub struct AliasGuard {
+    /// Lower-cased roots whose direct children may be aliases.
+    roots: Vec<String>,
+    /// Lower-cased `%LOCALAPPDATA%\packages\` prefix (LocalCache roots below it are recognised dynamically).
+    packages: Option<String>,
+    seen: Mutex<std::collections::HashSet<(u32, u64, u64)>>,
+}
+
+impl AliasGuard {
+    pub fn from_env() -> Self {
+        let lower = |v: &str| std::env::var(v).ok().map(|p| p.trim_end_matches('\\').to_lowercase());
+        let roots = [lower("APPDATA"), lower("LOCALAPPDATA")].into_iter().flatten().collect();
+        let packages = lower("LOCALAPPDATA").map(|l| format!("{l}\\packages\\"));
+        Self { roots, packages, seen: Mutex::default() }
+    }
+
+    /// Is `dir` (lower-cased, no trailing separator) a root whose children must be alias-checked?
+    pub fn is_root(&self, dir: &str) -> bool {
+        if self.roots.iter().any(|r| r == dir) {
+            return true;
+        }
+        match &self.packages {
+            Some(pkgs) => dir.strip_prefix(pkgs.as_str()).is_some_and(|rest| {
+                let mut it = rest.split('\\');
+                let (_family, lc, tail, extra) = (it.next(), it.next(), it.next(), it.next());
+                lc == Some("localcache") && matches!(tail, Some("roaming" | "local" | "locallow")) && extra.is_none()
+            }),
+            None => false,
+        }
+    }
+
+    /// Record a folder's identity; false if the same folder was already counted under another name.
+    pub fn first_visit(&self, id: (u32, u64, u64)) -> bool {
+        self.seen.lock().map(|mut s| s.insert(id)).unwrap_or(true)
+    }
+}
+
+/// (volume serial, file id high, file id low) of a directory, or None if it cannot be opened.
 #[cfg(windows)]
-pub fn package_local_cache() -> Option<String> {
+pub fn dir_identity(path: &Path) -> Option<(u32, u64, u64)> {
+    use std::os::windows::ffi::OsStrExt;
+    #[repr(C)]
+    struct FileIdInfo {
+        volume_serial_number: u64,
+        file_id: [u8; 16],
+    }
     #[link(name = "kernel32")]
     unsafe extern "system" {
-        fn GetCurrentPackageFamilyName(len: *mut u32, name: *mut u16) -> i32;
+        fn CreateFileW(name: *const u16, access: u32, share: u32, sa: *mut core::ffi::c_void, disp: u32, flags: u32, tmpl: isize) -> isize;
+        fn GetFileInformationByHandleEx(h: isize, class: i32, info: *mut core::ffi::c_void, size: u32) -> i32;
+        fn CloseHandle(h: isize) -> i32;
     }
-    let mut len: u32 = 256;
-    let mut buf = vec![0u16; len as usize];
-    // SAFETY: buf has `len` u16 slots; the API writes at most `len` chars (incl. NUL) and updates len.
-    let rc = unsafe { GetCurrentPackageFamilyName(&mut len, buf.as_mut_ptr()) };
-    if rc != 0 || len == 0 {
-        return None; // APPMODEL_ERROR_NO_PACKAGE (15700) for unpackaged processes
+    const FILE_SHARE_ALL: u32 = 0x1 | 0x2 | 0x4;
+    const OPEN_EXISTING: u32 = 3;
+    const FILE_FLAG_BACKUP_SEMANTICS: u32 = 0x0200_0000;
+    const FILE_ID_INFO_CLASS: i32 = 18;
+    let wide: Vec<u16> = path.as_os_str().encode_wide().chain(std::iter::once(0)).collect();
+    // SAFETY: `wide` is NUL-terminated; zero desired access only queries metadata; the handle is always closed.
+    unsafe {
+        let h = CreateFileW(wide.as_ptr(), 0, FILE_SHARE_ALL, std::ptr::null_mut(), OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, 0);
+        if h == -1 {
+            return None;
+        }
+        let mut info = FileIdInfo { volume_serial_number: 0, file_id: [0; 16] };
+        let ok = GetFileInformationByHandleEx(h, FILE_ID_INFO_CLASS, (&mut info as *mut FileIdInfo).cast(), size_of::<FileIdInfo>() as u32);
+        CloseHandle(h);
+        if ok == 0 {
+            return None;
+        }
+        let (hi, lo) = info.file_id.split_at(8);
+        Some((info.volume_serial_number as u32, u64::from_le_bytes(hi.try_into().ok()?), u64::from_le_bytes(lo.try_into().ok()?)))
     }
-    let family = String::from_utf16_lossy(&buf[..(len as usize).saturating_sub(1)]);
-    let local = std::env::var("LOCALAPPDATA").ok()?;
-    Some(format!("{local}\\Packages\\{family}\\LocalCache").to_lowercase())
 }
 
 #[cfg(not(windows))]
-pub fn package_local_cache() -> Option<String> {
+pub fn dir_identity(_path: &Path) -> Option<(u32, u64, u64)> {
     None
 }
 
@@ -204,6 +262,7 @@ pub fn scan_dir(path: &Path, name: Box<str>, ctx: &ScanCtx) -> DirNode {
         }
     };
 
+    let alias_root = ctx.aliases.is_root(&path.to_string_lossy().trim_end_matches('\\').to_lowercase());
     let mut subdirs = Vec::new();
     let mut local_ext: HashMap<Box<str>, (u64, u64)> = HashMap::new();
     let mut file_bytes = 0u64;
@@ -214,12 +273,8 @@ pub fn scan_dir(path: &Path, name: Box<str>, ctx: &ScanCtx) -> DirNode {
             continue; // symlinks + junctions: skip (Rust reports Windows mount points as symlinks)
         }
         if ft.is_dir() {
-            // Cheap name check first; the full-path comparison only runs for folders literally named LocalCache.
-            if let Some(skip) = &ctx.skip_dir
-                && entry.file_name().eq_ignore_ascii_case("LocalCache")
-                && entry.path().to_string_lossy().to_lowercase() == *skip
-            {
-                continue;
+            if alias_root && let Some(id) = dir_identity(&entry.path()) && !ctx.aliases.first_visit(id) {
+                continue; // the same folder was already counted under its other (virtualized) name
             }
             subdirs.push(entry);
             continue;
@@ -356,17 +411,33 @@ mod tests {
     }
 
     #[test]
-    fn skips_merged_package_local_cache() {
+    fn alias_roots_are_recognised() {
+        let g = AliasGuard {
+            roots: vec!["c:\\users\\a\\appdata\\roaming".into(), "c:\\users\\a\\appdata\\local".into()],
+            packages: Some("c:\\users\\a\\appdata\\local\\packages\\".into()),
+            seen: Mutex::default(),
+        };
+        assert!(g.is_root("c:\\users\\a\\appdata\\roaming"));
+        assert!(g.is_root("c:\\users\\a\\appdata\\local\\packages\\claude_x\\localcache\\roaming"));
+        assert!(g.is_root("c:\\users\\a\\appdata\\local\\packages\\claude_x\\localcache\\local"));
+        assert!(!g.is_root("c:\\users\\a\\appdata\\local\\packages\\claude_x\\localcache\\roaming\\claude"));
+        assert!(!g.is_root("c:\\users\\a\\documents"));
+        assert!(g.first_visit((1, 2, 3)));
+        assert!(!g.first_visit((1, 2, 3)), "second name of the same folder is skipped");
+        assert!(g.first_visit((1, 2, 4)));
+    }
+
+    #[test]
+    fn real_directories_have_distinct_identities() {
         let dir = tempfile::tempdir().unwrap();
-        write(&dir.path().join("Packages/Claude_x/LocalCache/Roaming/a.bin"), 2 * 1024 * 1024);
-        write(&dir.path().join("Packages/Claude_x/Settings/s.dat"), 10);
-        write(&dir.path().join("Packages/Other/LocalCache/b.bin"), 1000);
-        let (p, c) = (Progress::default(), AtomicBool::new(false));
-        let mut ctx = ScanCtx::new(&p, &c);
-        let skip = dir.path().join("Packages").join("Claude_x").join("LocalCache");
-        ctx.skip_dir = Some(skip.to_string_lossy().replace('/', "\\").to_lowercase());
-        let root = scan_dir(dir.path(), "root".into(), &ctx);
-        assert_eq!(root.size, 10 + 1000, "only the merged LocalCache of the current package is skipped");
+        std::fs::create_dir_all(dir.path().join("a")).unwrap();
+        std::fs::create_dir_all(dir.path().join("b")).unwrap();
+        let (a, b) = (dir_identity(&dir.path().join("a")), dir_identity(&dir.path().join("b")));
+        if cfg!(windows) {
+            assert!(a.is_some() && b.is_some());
+            assert_ne!(a, b);
+            assert_eq!(a, dir_identity(&dir.path().join("a")), "stable for the same folder");
+        }
     }
 
     #[test]
